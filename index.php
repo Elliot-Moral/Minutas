@@ -117,6 +117,8 @@ include('../funciones.php');
 $PuedeAdministrar = in_array($_SESSION['Usuario'],array((InList($_SESSION["Perfil"],"ADMIN","SISTE") ? $_SESSION['Usuario'] : "Cualquiera"),
 						'1018516798',//SALVADOR CABRERA
 						'79879905',//Carlos león
+						'98381246',//George jefe tecnología
+						'1121939126',//Andres Morales
 						'26424949'//LUISA MARÍA PIEDRAHITA
 						));
 //Conectar a la Base de datos
@@ -134,6 +136,8 @@ $mGrupoElemento['OTROS']='OTROS';
 $mTurno['Diurno']='Diurno';
 $mTurno['Nocturno']='Nocturno';
 $mTurno['Por Evento']='Por Evento';
+$mTurno['Apertura']='Apertura';
+$mTurno['Cierre']='Cierre';
 /******************************************************************************************************************************************
 Retornar los datos de un Puesto
 *******************************************************************************************************************************************/
@@ -319,16 +323,27 @@ Retornar los datos de elementos asignados a un Puesto de una Sucursal elementopu
 	$i=0;
 	while($Row = $Result->fetch_assoc()){
 		$i++;?>
-    <TR>
-      <TD><?php echo $i;?></TD>
-      <TD><?php echo $Row['IDElementoPuestoSucursal'];?></TD>
-      <TD><?php echo $Row['NomSucursal'];?></TD>
-      <TD><?php echo $Row['Puesto'].' '.$Row['ObsPuesto'];?></TD>
-      <TD><?php echo $Row['Grupo'];?></TD>
-      <TD><?php echo $Row['Elemento'];?></TD>
-      <TD><input name="Cantidad<?php echo $Row['IDElemento'];?>" id="Cantidad<?php echo $Row['IDElemento'];?>" maxlength="6" class="form-control" value="<?php echo ($Row['Cantidad']>0 ? $Row['Cantidad'] : '');?>" onBlur="EnviarPuestoSucursalElemento(this,<?php echo intval($Row['IDElemento']).",".$Row['IDElementoPuestoSucursal'];?>);" <?php echo ($Row['Borrada']==1 ? 'disabled' : '');?>></TD>
-      <TD><input name="Borrada<?php echo $Row['IDElemento'];?>" type="checkbox" id="Borrada<?php echo $Row['IDElemento'];?>" value="1" onClick="EnviarPuestoSucursalElemento(this,<?php echo intval($Row['IDElemento']).",".$Row['IDElementoPuestoSucursal'];?>);" <?php echo ($Row['Borrada']==1 ? '' : 'checked');//Cconcepto al contrario Borrada/Activo?>></TD>
-    </TR><?php
+    <tr class="bg-white border-t border-gray-200" align=center>
+      <td class="p-2">
+				<div class="inline-flex items-center gap-3 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg group hover:bg-white transition-colors">
+					<div class="flex flex-col">
+						<span class="text-[12px] font-mono font-bold text-slate-700 leading-none tracking-tight">
+							<?php echo $i;?>
+						</span>
+					</div>
+				</div>
+			</td>
+      <td class="p-2"><?php echo $Row['IDElementoPuestoSucursal'];?></td>
+      <td class="p-2"><?php echo $Row['NomSucursal'];?></td>
+      <td class="p-2"><?php echo $Row['Puesto'].' '.$Row['ObsPuesto'];?></td>
+      <td class="p-2"><?php echo $Row['Grupo'];?></td>
+      <td class="p-2"><?php echo $Row['Elemento'];?></td>
+      <td class="p-2"><input name="Cantidad<?php echo $Row['IDElemento'];?>" id="Cantidad<?php echo $Row['IDElemento'];?>" class="block w-full max-w-32 ps-9 pe-3 py-2 text-gray-500 rounded-lg border border-default-medium text-heading text-sm shadow-xs placeholder:text-body outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all" 
+			 value="<?php echo ($Row['Cantidad']>0 ? $Row['Cantidad'] : '');?>" onBlur="EnviarPuestoSucursalElemento(this,<?php echo intval($Row['IDElemento']).",".$Row['IDElementoPuestoSucursal'];?>);" <?php echo ($Row['Borrada']==1 ? 'disabled' : '');?>></td>
+      <td class="p-2"><input name="Borrada<?php echo $Row['IDElemento'];?>" type="checkbox" id="Borrada<?php echo $Row['IDElemento'];?>" value="1"
+			class="block w-full max-w-32 ps-9 pe-3 py-2 text-gray-500 rounded-lg border border-default-medium text-heading text-sm shadow-xs placeholder:text-body outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all" 
+			onClick="EnviarPuestoSucursalElemento(this,<?php echo intval($Row['IDElemento']).",".$Row['IDElementoPuestoSucursal'];?>);" <?php echo ($Row['Borrada']==1 ? '' : 'checked');//Cconcepto al contrario Borrada/Activo?>></td>
+    </tr><?php
 	}//fin del while
 	mysqli_close($mysqli);
 	exit;
@@ -480,9 +495,11 @@ Retornar los datos de elementos asignados a un Puesto de una Sucursal elementopu
 				ORDER BY Puesto.Puesto,Elemento.Grupo,Elemento.Elemento";
 	$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
 	$i=0;
+	$arrayIdElement = [];
 	while($Row = $Result->fetch_assoc()){
+
 		$i++;?>
-		<tr class="border-b border-gray-200 hover:bg-blue-50/50 transition-colors duration-200">
+		<tr id="Elemento_<?php echo $i;?>" name="Elemento_<?php echo $Row['IDElemento'];?>" class="<?php echo ($Row['CantidadReal'] <= 0 ? 'trElemento bg-red-50 border border-red-300 hidden elementovacio' : '')?>  'border-b border-gray-200 hover:bg-blue-50/50 transition-colors duration-200'">
 			<td class="px-4 py-3 text-center text-sm font-medium text-gray-700"><?php echo $i;?></td>
 			<td class="px-4 py-3">
 				<span class="inline-block px-3 py-1 bg-blue-50 text-blue-700 rounded-md text-[12px] font-medium">
@@ -490,13 +507,13 @@ Retornar los datos de elementos asignados a un Puesto de una Sucursal elementopu
 				</span>
 			</td>
 			<td class="px-4 py-3 text-center">
-			<span class="inline-flex items-center justify-center px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-semibold">
-				<?php echo ($Row['CantidadReal']===NULL ? 'N/A' : $Row['CantidadReal']);?>
-			</span>
-			<input name="CantidadReal<?php echo $Row['IDElemento'];?>" id="CantidadReal<?php echo $Row['IDElemento'];?>" type="hidden" value="<?php echo ($Row['CantidadReal']===NULL ? 'N/A' : $Row['CantidadReal']);?>">
+				<span class="inline-flex items-center justify-center px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-semibold">
+					<?php echo ($Row['CantidadReal']===NULL ? 'N/A' : $Row['CantidadReal']);?>
+				</span>
+				<input name="CantidadReal<?php echo $Row['IDElemento'];?>" id="CantidadReal<?php echo $Row['IDElemento'];?>" type="hidden" value="<?php echo ($Row['CantidadReal']===NULL ? 'N/A' : $Row['CantidadReal']);?>">
 			</td>
 			<td class="px-4 py-3">
-			<input name="CantidadVerificada<?php echo $Row['IDElemento'];?>" 
+				<input name="CantidadVerificada<?php echo $Row['IDElemento'];?>" 
 					 id="CantidadVerificada<?php echo $Row['IDElemento'];?>" 
 					 type="number" 
 					 min="0" 
@@ -507,7 +524,7 @@ Retornar los datos de elementos asignados a un Puesto de una Sucursal elementopu
 					 class="w-full px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
 			</td>
 			<td class="px-4 py-3">
-			<input name="ObsVerifica<?php echo $Row['IDElemento'];?>" 
+				<input name="ObsVerifica<?php echo $Row['IDElemento'];?>" 
 					 id="ObsVerifica<?php echo $Row['IDElemento'];?>" 
 					 type="text" 
 					 maxlength="100" 
@@ -516,8 +533,10 @@ Retornar los datos de elementos asignados a un Puesto de una Sucursal elementopu
 					 placeholder="Observaciones..."
 					 class="w-full px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
 			</td>
-		</tr><?php
+		</tr>
+		<?php
 	}//fin del while
+	
 	mysqli_close($mysqli);
 	exit;
 /******************************************************************************************************************************************
@@ -666,23 +685,28 @@ Retornar Los datos de una Minuta
 /******************************************************************************************************************************************
 Retornar los Recesos en la Minuta
 *******************************************************************************************************************************************/
-} elseif ($_GET['TipoModificar'] == md5('Ajax5JorA6Recesos' . date('d'))) {
-    $QueriMinuta = "SELECT Minuta.FinalizaRegistro 
-                    FROM " . $PrefBD . "solicitudes.vigilanciaminuta Minuta 
-                    WHERE Minuta.IDMinuta=" . intval($_GET['IDMinuta']) . " 
+}elseif ($_GET['TipoModificar'] == md5('Ajax5JorA6Recesos' . date('d'))) {
+    // 1. Consulta de la Minuta Principal para verificar estado
+    $QueriMinuta = "SELECT FinalizaRegistro, FFirmaEntrante, FFirmaSaliente 
+                    FROM " . $PrefBD . "solicitudes.vigilanciaminuta 
+                    WHERE IDMinuta=" . intval($_GET['IDMinuta']) . " 
                     LIMIT 1";
     $ResultMinuta = $mysqli->query($QueriMinuta) or die(mysqli_error($mysqli));
     $RowMinuta = $ResultMinuta->fetch_assoc();
 
-    $Queri = "SELECT MinutaRecesos.*, Receso.Receso, Minuta.FinalizaRegistro 
+    // 2. Definición global de estados
+    $finalizado = ($RowMinuta['FinalizaRegistro'] > 0);
+    $estaFirmado = (!empty($RowMinuta['FFirmaEntrante']) || !empty($RowMinuta['FFirmaSaliente']));
+    $bloqueado = ($finalizado || $estaFirmado); // Si cualquiera es true, se bloquea
+
+    // 3. Consulta de Recesos
+    $Queri = "SELECT MinutaRecesos.*, Receso.Receso, Minuta.FinalizaRegistro
               FROM " . $PrefBD . "solicitudes.vigilanciaminutarecesos MinutaRecesos 
               LEFT JOIN " . $PrefBD . "solicitudes.vigilanciaminuta Minuta ON MinutaRecesos.IDMinuta=Minuta.IDMinuta 
-              LEFT JOIN " . $PrefBD . "solicitudes.vigilanciareceso Receso ON MinutaRecesos.IDReceso=Receso.IDReceso 
+              LEFT JOIN " . $PrefBD . "solicitudes.vigilanciareceso Receso ON MinutaRecesos.IDReceso=Receso.IDReceso
               WHERE MinutaRecesos.IDMinuta=" . intval($_GET['IDMinuta']) . " AND MinutaRecesos.Borrada=0 
               ORDER BY MinutaRecesos.IDMinutaReceso";
     $Result = $mysqli->query($Queri) or die(mysqli_error($mysqli)); 
-    
-    $finalizado = ($RowMinuta['FinalizaRegistro'] > 0);
     ?>
 
     <!-- Contenedor de Tabla Moderna -->
@@ -695,7 +719,7 @@ Retornar los Recesos en la Minuta
                     <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Personal Asume</th>
                     <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Fin</th>
                     <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Observación / Registro</th>
-                    <?php if (!$finalizado): ?>
+                    <?php if (!$bloqueado): // Solo muestra cabecera de acciones si NO está bloqueado ?>
                         <th class="px-4 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Acciones</th>
                     <?php endif; ?>
                 </tr>
@@ -704,14 +728,14 @@ Retornar los Recesos en la Minuta
                 <?php
                 $i = 0;
                 while ($Row = $Result->fetch_assoc()) {
-                    $i++; ?>
+                    $i++; 
+                    ?>
                     <tr id="DivReceso<?php echo $i; ?>" class="hover:bg-blue-50/30 transition-colors group">
-                        <!-- Hora Inicio + Botón Editar -->
                         <td class="px-4 py-3 whitespace-nowrap">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-bold text-gray-700"><?php echo $Row['HoraInicioReceso']; ?></span>
-                                <?php if (!$finalizado): ?>
-                                    <button type="button" onClick="EditarReceso(<?php echo $Row['IDMinutaReceso']; ?>);" class="text-blue-400 hover:text-blue-600 transition-colors" title="Editar Registro">
+                                <?php if (!$bloqueado): // Oculta botón editar individual ?>
+                                    <button type="button" onClick="EditarReceso(<?php echo $Row['IDMinutaReceso']; ?>);" class="text-blue-400 hover:text-blue-600 transition-colors">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2.5 2.5 0 113.536 3.536L12 14.232l-4 1 1-4 9.414-9.414z" />
                                         </svg>
@@ -720,12 +744,10 @@ Retornar los Recesos en la Minuta
                             </div>
                         </td>
 
-                        <!-- Actividad -->
                         <td class="px-4 py-3 text-sm text-gray-600 font-medium">
                             <?php echo $Row['Receso']; ?>
                         </td>
 
-                        <!-- Persona que asume -->
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-2 text-sm text-gray-700">
                                 <div class="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center text-[10px] font-bold text-orange-500 border border-orange-200 uppercase">
@@ -735,14 +757,12 @@ Retornar los Recesos en la Minuta
                             </div>
                         </td>
 
-                        <!-- Hora Fin -->
-                        <td class="px-4 py-3 whitespace-nowrap text-sm font-bold ">
-													<span class="text-green-700 p-1 bg-green-50 border border-green-100 rounded-lg">
-                            <?php echo $Row['HoraFinReceso']; ?>
-													</span>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-bold">
+                            <span class="text-green-700 p-1 bg-green-50 border border-green-100 rounded-lg">
+                                <?php echo $Row['HoraFinReceso']; ?>
+                            </span>
                         </td>
 
-                        <!-- Observación y Fecha -->
                         <td class="px-4 py-3">
                             <div class="flex flex-col">
                                 <span class="text-sm text-gray-600"><?php echo $Row['ObsReceso']; ?></span>
@@ -752,10 +772,9 @@ Retornar los Recesos en la Minuta
                             </div>
                         </td>
 
-                        <!-- Acciones (Borrar) -->
-                        <?php if (!$finalizado): ?>
+                        <?php if (!$bloqueado): // Oculta columna de borrar individual ?>
                             <td class="px-4 py-3 text-center">
-                                <button type="button" onClick="BorrarReceso(<?php echo $Row['IDMinutaReceso']; ?>);" class="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Eliminar Registro">
+                                <button type="button" onClick="BorrarReceso(<?php echo $Row['IDMinutaReceso']; ?>);" class="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
@@ -778,10 +797,14 @@ Retornar los Recesos en la Minuta
 
     <!-- Scripts de Control -->
     <script type="text/javascript">
-        <?php if (!$finalizado): ?>
-            $("#BotEditarReceso").show();
-        <?php else: ?>
-            $("#BotEditarReceso").hide();
+        <?php if ($bloqueado): ?>
+            // Seleccionamos el contenedor del botón de agregar (generalmente fuera de este fragmento Ajax)
+            const divBoton = document.getElementById("DivBotonAgregarReceso");
+            if(divBoton) divBoton.style.display = "none";
+            
+            // Si tienes un botón específico de edición general
+            const botEditar = document.getElementById("BotEditarReceso");
+            if(botEditar) botEditar.style.display = "none";
         <?php endif; ?>
     </script>
 
@@ -859,21 +882,26 @@ BORRAR EL REGISTRO DE UN RECESO
 Retornar las Novedades en la Minuta
 *******************************************************************************************************************************************/
 } elseif ($_GET['TipoModificar'] == md5('Ajax7JorA6Novedades' . date('d'))) {
-    $QueriMinuta = "SELECT Minuta.FinalizaRegistro 
-                    FROM " . $PrefBD . "solicitudes.vigilanciaminuta Minuta 
-                    WHERE Minuta.IDMinuta=" . intval($_GET['IDMinuta']) . " 
+    // 1. Consultamos el estado de finalización y las firmas
+    $QueriMinuta = "SELECT FinalizaRegistro, FFirmaEntrante, FFirmaSaliente 
+                    FROM " . $PrefBD . "solicitudes.vigilanciaminuta 
+                    WHERE IDMinuta=" . intval($_GET['IDMinuta']) . " 
                     LIMIT 1";
     $ResultMinuta = $mysqli->query($QueriMinuta) or die(mysqli_error($mysqli));
     $RowMinuta = $ResultMinuta->fetch_assoc();
 
+    // 2. Definimos la variable de bloqueo global
+    $finalizado = ($RowMinuta['FinalizaRegistro'] > 0);
+    $estaFirmado = (!empty($RowMinuta['FFirmaEntrante']) || !empty($RowMinuta['FFirmaSaliente']));
+    $bloqueado = ($finalizado || $estaFirmado);
+
+    // 3. Consulta de Novedades
     $Queri = "SELECT MinutaNovedades.* 
               FROM " . $PrefBD . "solicitudes.vigilanciaminutanovedades MinutaNovedades 
-              LEFT JOIN " . $PrefBD . "solicitudes.vigilanciaminuta Minuta ON MinutaNovedades.IDMinuta=Minuta.IDMinuta 
               WHERE MinutaNovedades.IDMinuta=" . intval($_GET['IDMinuta']) . " AND MinutaNovedades.Borrada=0 
               ORDER BY MinutaNovedades.IDMinutaNovedad";
     $Result = $mysqli->query($Queri) or die(mysqli_error($mysqli)); 
     
-    $finalizado = ($RowMinuta['FinalizaRegistro'] > 0);
     ?>
 
     <div class="overflow-hidden rounded-xl border border-gray-200 shadow-sm bg-white mb-4">
@@ -883,9 +911,9 @@ Retornar las Novedades en la Minuta
                     <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest w-16">Núm</th>
                     <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">Hora</th>
                     <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Descripción Novedad</th>
-                    <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Comunicador Novedad</th>
+                    <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Comunicador</th>
                     <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Cargo</th>
-                    <?php if (!$finalizado): ?>
+                    <?php if (!$bloqueado): ?>
                         <th class="px-4 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-20">Acciones</th>
                     <?php endif; ?>
                 </tr>
@@ -897,9 +925,8 @@ Retornar las Novedades en la Minuta
                     $i++; ?>
                     <tr id="DivNovedad<?php echo $i; ?>" class="hover:bg-blue-50/30 transition-colors group">
                         
-                        <!-- Número y Editar -->
                         <td class="px-4 py-3 whitespace-nowrap">
-                            <?php if (!$finalizado): ?>
+                            <?php if (!$bloqueado): ?>
                                 <button onClick="EditarNovedad(<?php echo $Row['IDMinutaNovedad']; ?>);" class="flex items-center gap-2 group/btn cursor-pointer">
                                     <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md group-hover/btn:bg-blue-600 group-hover/btn:text-white transition-all">
                                         <?php echo $i; ?>
@@ -913,12 +940,10 @@ Retornar las Novedades en la Minuta
                             <?php endif; ?>
                         </td>
 
-                        <!-- Hora -->
                         <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-700">
                             <?php echo $Row['HoraNovedad']; ?>
                         </td>
 
-                        <!-- Descripción -->
                         <td class="px-4 py-3">
                             <div class="flex flex-col gap-1">
                                 <span class="text-sm text-gray-700 leading-relaxed"><?php echo $Row['DescripcionNovedad']; ?></span>
@@ -928,7 +953,6 @@ Retornar las Novedades en la Minuta
                             </div>
                         </td>
 
-                        <!-- Comunicador -->
                         <td class="px-4 py-3 whitespace-nowrap">
                             <div class="flex items-center gap-2">
                                 <div class="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-[10px] font-bold text-indigo-500 border border-indigo-100 uppercase">
@@ -938,18 +962,15 @@ Retornar las Novedades en la Minuta
                             </div>
                         </td>
 
-                        <!-- Cargo -->
                         <td class="px-4 py-3 whitespace-nowrap">
                             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200 uppercase tracking-tight">
                                 <?php echo $Row['CargoComunicador']; ?>
                             </span>
                         </td>
 
-                        <!-- Acciones -->
-                        <?php if (!$finalizado): ?>
-
-													<td class="px-4 py-3 text-center">
-                                <button type="button" onClick="BorrarNovedad(<?php echo $Row['IDMinutaNovedad']; ?>);" class="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Eliminar Registro">
+                        <?php if (!$bloqueado): ?>
+                            <td class="px-4 py-3 text-center">
+                                <button type="button" onClick="BorrarNovedad(<?php echo $Row['IDMinutaNovedad']; ?>);" class="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
@@ -961,13 +982,8 @@ Retornar las Novedades en la Minuta
 
                 <?php if ($i == 0): ?>
                     <tr>
-                        <td colspan="6" class="px-4 py-12 text-center">
-                            <div class="flex flex-col items-center justify-center text-gray-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <span class="text-sm italic">No se han registrado novedades.</span>
-                            </div>
+                        <td colspan="6" class="px-4 py-12 text-center text-gray-400 italic">
+                            No se han registrado novedades.
                         </td>
                     </tr>
                 <?php endif; ?>
@@ -975,11 +991,16 @@ Retornar las Novedades en la Minuta
         </table>
     </div>
 
+    <!-- Scripts de Control de Botones -->
     <script type="text/javascript">
-        <?php if (!$finalizado): ?>
-            $("#BotEditarNovedad").show();
-        <?php else: ?>
+        <?php if ($bloqueado): ?>
+            // Si está firmado o finalizado, ocultamos los botones de agregar/editar
             $("#BotEditarNovedad").hide();
+            $("#DivBotonAgregarNovedad").hide(); 
+        <?php else: ?>
+            // Si está abierto, los mostramos
+            $("#BotEditarNovedad").show();
+            $("#DivBotonAgregarNovedad").show();
         <?php endif; ?>
     </script>
 
@@ -1137,9 +1158,283 @@ Firma de la Minuta
 	}else{
 		echo "*Error* Parámetros no válido";
 	}
+
+	// verificar si ambas firmas están completas para marcar la minuta como finalizada
+	$QueriCheck = "SELECT VM.FFirmaEntrante, VM.FFirmaSaliente, PuestoSucursal.ObsPuesto AS ObsPuesto, VM.FinalizaRegistro, PuestoS.Puesto
+		FROM ".$PrefBD."solicitudes.vigilanciaminuta AS VM
+		JOIN ".$PrefBD."solicitudes.vigilanciapuestosucursal AS PuestoSucursal ON VM.Sucursal=PuestoSucursal.Sucursal
+		JOIN ".$PrefBD."solicitudes.vigilanciapuesto AS PuestoS ON PuestoSucursal.IDPuesto=PuestoS.IDPuesto
+		WHERE IDMinuta=".intval($_POST['IDMinuta'])."
+		LIMIT 1";
+			$ResultCheck = $mysqli->query($QueriCheck) or die(mysqli_error($mysqli));
+			if($RowCheck = $ResultCheck->fetch_assoc()){
+				if($RowCheck['FFirmaEntrante'] && $RowCheck['FFirmaSaliente']){
+        	NotificacionSolicitud($mysqli,$_POST['IDMinuta'],'Debe Autorizar', $RowCheck['ObsPuesto'], $RowCheck['Puesto']);
+				}
+		}
+
 	mysqli_close($mysqli);
 	exit;
-}?>
+/****************************************************************************************************************************************
+Generar Reportes de Minutas
+****************************************************************************************************************************************/
+}elseif($_POST['TipoGrabar']==md5('JorA7GenerarReporte'.date('d')) and $_POST['TipoModificar']==md5('ConsultaReporteJorA7'.date('d'))){
+		set_time_limit(0);
+    ini_set('memory_limit', '-1');
+
+    if ($_POST['TipoReporte'] == 'TodosLosRegistros') {
+
+        // Filtro de seguridad según permisos
+        if ($PuedeAdministrar or $PuedeCrear or $PuedeConsultar) {
+            $Filtrico = " WHERE VM.IDMinuta ";
+        }
+
+        // // Filtro de Fechas Optimizado (Sin LEFT para usar índices)
+        if ($_POST['FechaInicial'] or $_POST['FechaFinal']) {
+            $f1 = $_POST['FechaInicial'] ?: $_POST['FechaFinal'];
+            $f2 = $_POST['FechaInicial'] ?: $_POST['FechaFinal'];
+            $Filtrico .= " AND VM.Fecha BETWEEN '" . DarFechaSQL($f1) . "' AND '" . DarFechaSQL($f2) . "' ";
+        }
+
+        // // Filtro de Estado
+				if ($_POST['estadoReporte']) {
+						$Filtrico .= " AND (
+								CASE 
+										WHEN VM.FinalizaRegistro IS NOT NULL AND VM.FinalizaRegistro <> '' AND VM.FFirmaEntrante IS NOT NULL AND VM.FFirmaSaliente IS NOT NULL 
+												THEN 'Finalizada'
+										WHEN VM.FFirmaEntrante IS NOT NULL AND VM.FFirmaSaliente IS NOT NULL AND (VM.FinalizaRegistro IS NULL OR VM.FinalizaRegistro = '') 
+												THEN 'En Proceso'
+										WHEN (VM.FFirmaEntrante IS NULL OR VM.FFirmaSaliente IS NULL) AND (VM.FinalizaRegistro IS NULL OR VM.FinalizaRegistro = '') 
+												THEN 'Recibida'
+										ELSE 'Recibida'
+								END
+						) = '" . $_POST['estadoReporte'] . "' ";
+				}
+
+        // // Filtro de Sucursal
+        if ($_POST['SucursalFiltro']) {
+            $Filtrico .= " AND FIND_IN_SET(VM.Sucursal,'" . $_POST['SucursalFiltro'] . "')";
+        }
+
+				$Queri = "
+					SELECT 
+						VM.IDMinuta, 
+						VM.Turno, 
+						PuestoSuc.Sucursal, 
+						PuestoSuc.ObsPuesto, 
+						Puesto.Puesto, 
+						CONCAT(EElabora.Nom, ' ', EElabora.Apellido1, ' ', EElabora.Apellido2) AS NomElabora,
+						VM.Fecha, 
+						VM.HoraInicio,
+						CONCAT(EVE.Nom, ' ', EVE.Apellido1, ' ', EVE.Apellido2) AS NomEVigilanteEn, 
+						VM.FFirmaEntrante,  
+						VM.ObsFirmaEntrante,        
+						CONCAT(EVS.Nom, ' ', EVS.Apellido1, ' ', EVS.Apellido2) AS NomEVigilanteSAL, 
+						VM.FFirmaSaliente, 
+						VM.ObsFirmaSaliente,
+						VM.RealizaRequisa, 
+						VM.ObsRequisa, 
+						VM.HoraFinalizaRecorrido, 
+						VM.ObsMinuta, 
+						VM.FinalizaRegistro,
+
+						-- 1. Agrupación de RECESOS
+						GROUP_CONCAT(DISTINCT 
+								CONCAT(Recesos.Receso, ' (', MRecesos.HoraInicioReceso, ' - ', MRecesos.HoraFinReceso, ')') 
+								SEPARATOR ' \n '
+						) AS DetalleRecesos,
+
+						-- 2. Agrupación de NOVEDADES
+						GROUP_CONCAT(DISTINCT 
+								CONCAT(MNovedad.HoraNovedad, ': ', MNovedad.DescripcionNovedad) 
+								SEPARATOR ' \n '
+						) AS Novedades,
+
+						-- 3. Agrupación de ELEMENTOS VERIFICADOS
+						GROUP_CONCAT(DISTINCT 
+								CONCAT(Ele.Elemento, ': Cant. ', MEle.CantidadVerificada, ' de ', MEle.CantidadReal, 
+											IF(MEle.Verificado = 1, ' [OK]', ' [X]'), 
+											IF(MEle.ObsVerifica <> '', CONCAT(' Obs: ', MEle.ObsVerifica), ''))
+								SEPARATOR ' \n '
+						) AS InventarioVerificado
+
+				FROM " . $PrefBD . "solicitudes.vigilanciaminuta AS VM        
+				JOIN " . $PrefBD . "solicitudes.vigilanciapuestosucursal AS PuestoSuc ON PuestoSuc.IDPuestoSucursal = VM.IDPuestoSucursal             
+				JOIN " . $PrefBD . "solicitudes.vigilanciapuesto AS Puesto ON Puesto.IDPuesto = PuestoSuc.IDPuesto
+
+				-- Joins de Empleados (Recursos)
+				LEFT JOIN  " . $PrefBD . "recursos.emplea EElabora ON VM.Elabora = EElabora.Nit_CCE        
+				LEFT JOIN " . $PrefBD . "recursos.emplea EVE ON VM.VigilanteEntrante = EVE.Nit_CCE        
+				LEFT JOIN " . $PrefBD . "recursos.emplea EVS ON VM.VigilanteSaliente = EVS.Nit_CCE        
+
+				-- Joins de Recesos
+				LEFT JOIN " . $PrefBD . "solicitudes.vigilanciaminutarecesos MRecesos ON VM.IDMinuta = MRecesos.IDMinuta AND MRecesos.Borrada = 0
+				LEFT JOIN " . $PrefBD . "solicitudes.vigilanciareceso Recesos ON MRecesos.IDReceso = Recesos.IDReceso
+
+				-- Joins de Novedades
+				LEFT JOIN " . $PrefBD . "solicitudes.vigilanciaminutanovedades MNovedad ON VM.IDMinuta = MNovedad.IDMinuta AND MNovedad.Borrada = 0
+
+				-- Joins de Elementos / Inventario
+				LEFT JOIN " . $PrefBD . "solicitudes.vigilanciaminutaelemento MEle ON VM.IDMinuta = MEle.IDMinuta AND MEle.Borrada = 0
+				LEFT JOIN " . $PrefBD . "solicitudes.vigilanciaelemento Ele ON MEle.IDElemento = Ele.IDElemento
+
+				". $Filtrico ." AND VM.Borrada = 0
+				GROUP BY VM.IDMinuta
+				ORDER BY VM.Fecha DESC, VM.IDMinuta DESC;";
+
+				$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
+
+        // Mapeo para el Excel (Mantengo los nombres de campos que espera tu Front-end)
+        // Función para convertir HH:MM:SS a decimal de Excel y fechas correctamente
+        $Campos = "rows = prez.map(row => {
+            const horaADecimal = (h) => {
+                if(!h || h == '00:00:00') return '';
+                let partes = h.split(':');
+                return (parseInt(partes[0]) / 24) + (parseInt(partes[1]) / (24 * 60)) + (parseInt(partes[2] || 0) / (24 * 60 * 60));
+            };
+            
+            const formatoFecha = (f) => {
+                if(!f || f == '') return '';
+                return f;
+            };
+
+            return {
+                IDMinuta: row.IDMinuta,
+                ObsPuesto: row.ObsPuesto,
+                Puesto: row.Puesto,
+                Turno: row.Turno,
+                NombreElabora: row.NomElabora,
+                NombreElabora: row.NomElabora,
+                Fecha: formatoFecha(row.Fecha),
+                HoraInicio: row.HoraInicio,
+                VigilanteEntrante: row.NomEVigilanteEn,
+								FechaDeFirmaEntrante: formatoFecha(row.FFirmaEntrante),
+                Observacion: row.ObsFirmaEntrante,
+								VilganteSaliente: row.NomEVigilanteSAL,
+								FechaDeFirmaSaliente: formatoFecha(row.FFirmaSaliente),
+								ObservacionSaliente: row.ObsFirmaSaliente,
+								RealizaRequisa: row.RealizaRequisa == 1 ? 'Si' : 'No',
+								ObservacionRequisa: row.ObsRequisa,
+								HoraFinalizaRecorrido: row.HoraFinalizaRecorrido,
+								ObservacionMinuta: row.ObsMinuta,
+								FechaFinalizaRegistro: formatoFecha(row.FinalizaRegistro),
+								DetalleRecesos: row.DetalleRecesos,
+								Novedades: row.Novedades,
+								InventarioVerificado: row.InventarioVerificado,
+            };
+        });";
+
+        $Formato = "
+            formatColumn(worksheet, 1, '0');                    // IDMinuta
+						formatColumn(worksheet, 6, 'mm/dd/yyyy');     // Fecha
+						formatColumn(worksheet, 8, 'mm/dd/yyyy');     // FechaFirmaEntrante
+						formatColumn(worksheet, 11, 'mm/dd/yyyy');    // FechaFirmaSaliente
+						formatColumn(worksheet, 15, 'mm/dd/yyyy');    // FechaFinalizaRegistro
+						formatColumn(worksheet, 9, '@');              // ObservacionFirmaEntrante
+						formatColumn(worksheet, 12, '@');             // ObservacionFirmaSaliente
+						formatColumn(worksheet, 14, '@');             // ObservacionMinuta
+						formatColumn(worksheet, 3, '@');              // ObsPuesto
+						formatColumn(worksheet, 4, '@');              // Puesto
+						formatColumn(worksheet, 5, '@');              // Turno
+						formatColumn(worksheet, 10, '@');             // Observacion
+						formatColumn(worksheet, 13, '@');             // ObservacionRequisa
+						formatColumn(worksheet, 16, '@');             // DetalleRecesos
+						formatColumn(worksheet, 17, '@');             // Novedades
+						formatColumn(worksheet, 18, '@');             // InventarioVerificado
+        ";
+
+        $mArrayCampos = array(
+            'Codigo' => 'Campos',
+            'Campos' => $Campos,
+            'Formato' => $Formato
+        );
+
+        echo "[" . json_encode($mArrayCampos, JSON_UNESCAPED_UNICODE);
+
+        while ($Row = $Result->fetch_assoc()) {
+            $Array = array();
+            foreach ($Row as $Clave => $Valor) {
+                // Limpieza de datos y formato de fechas para el JSON
+                $Array[$Clave] = trim(strip_tags($Valor));
+            }
+            echo "," . json_encode($Array, JSON_UNESCAPED_UNICODE);
+        }
+        echo "]";
+    }
+
+    mysqli_close($mysqli);
+    exit;
+}
+
+	function NotificacionSolicitud($mysqli,$mIDSolicitud=0,$mTipo='', $sucursal, $puesto){
+
+	// mensaje para el correo con diseño personalizado
+	$destinario = "luisamp@colegiosminutodedios.edu.co";
+	$Encabezado = "Notificación de Solicitud - ".$sucursal;
+	$Servicio = "Departamento de Seguridad";
+	$MensajeFinal = '<div style="background-color: #f4f7f9; padding: 20px; font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif;">
+				<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e1e8ed; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+						
+						<!-- Encabezado con color corporativo -->
+						<div style="background-color: #104379; padding: 20px; text-align: center;">
+								<h2 style="color: #ffffff; margin: 0; font-size: 20px; letter-spacing: 1px;">
+										Notificación de Solicitud
+								</h2>
+								<p style="color: #a5c3e4; margin: 5px 0 0 0; font-size: 14px;">Sucursal: '.$sucursal.'</p>
+						</div>
+
+						<!-- Cuerpo del correo -->
+						<div style="padding: 30px; line-height: 1.6; color: #444;">
+								<p style="margin-top: 0; font-size: 16px;">
+										Hola, se ha generado una <strong>Nueva Solicitud</strong> en el sistema de seguridad <span style="font-weight: bold;">Modulo Minutas</span>. A continuación, los detalles principales:
+								</p>
+
+								<!-- Tabla de detalles para mejor lectura -->
+								<div style="background-color: #f9fafb; border-radius: 6px; padding: 15px; margin: 20px 0; border-left: 4px solid #15b315;">
+										<table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+												<tr>
+														<td style="padding: 5px 0; color: #777; width: 40%;"><strong>ID Solicitud:</strong></td>
+														<td style="padding: 5px 0; color: #104379; font-weight: bold;">#'.$mIDSolicitud.'</td>
+												</tr>
+												<tr>
+														<td style="padding: 5px 0; color: #777;"><strong>Puesto:</strong></td>
+														<td style="padding: 5px 0; color: #333;">'.$puesto.'</td>
+												</tr>
+												<tr>
+														<td style="padding: 5px 0; color: #777;"><strong>Tipo de Solicitud:</strong></td>
+														<td style="padding: 5px 0; color: #333;">'.$mTipo.'</td>
+												</tr>
+												<tr>
+														<td style="padding: 5px 0; color: #777;"><strong>Fecha y Hora:</strong></td>
+														<td style="padding: 5px 0; color: #333;">'.date('d/m/Y H:i:s').'</td>
+												</tr>
+										</table>
+								</div>
+
+								<p style="font-size: 14px;">Por favor, ingrese al sistema para gestionar o revisar los detalles adicionales de este registro.</p>
+								
+								<!-- Botón de acción opcional -->
+								<div style="text-align: center; margin-top: 25px;">
+										<a href="https://intranet.cemid.org/Vigilancia/index.php?TipoModificar=66f60b50d5e1daffacbdf391e52a1963" style="background-color: #104379; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px; display: inline-block;">
+												Abrir Sistema de Seguridad
+										</a>
+								</div>
+						</div>
+
+						<!-- Pie de página -->
+						<div style="background-color: #f9fafb; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">
+								<p style="margin: 0; font-size: 12px; color: #999;">
+										Este es un mensaje automático, por favor no responda a este correo.<br>
+										<strong>Departamento de Seguridad</strong>
+								</p>
+						</div>
+					</div>
+			</div>';
+
+    EnviarCorreo($mysqli, $destinario, $Encabezado, $MensajeFinal, $Servicio, $CC, $CCo, $mFile);
+	}
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1160,6 +1455,8 @@ Firma de la Minuta
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
 
+
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="../funciones.js"></script>
 <style>
 .colorBase{
@@ -1168,6 +1465,38 @@ Firma de la Minuta
 </style>
 
 <script type="text/javascript">
+$(function(){//Para Fechas
+	$("#VigilanteEntrante,#VigilanteSaliente,#VigilanteAsume1").autocomplete({
+		source: "index.php?TipoModificar=<?php echo md5('Ajax1JorA6ListadoVigilantes'.date('d'));?>",
+		minLength: 3,
+		autoFocus: true,
+		change: function (event, ui){
+										if(ui.item == null || ui.item == undefined){
+											$(this).val("");
+									  	}
+									}
+	});
+	$.datepicker.regional['es'] = {
+        closeText: 'Cerrar',
+        prevText: '&#x3c;Ant',
+        nextText: 'Sig&#x3e;',
+        currentText: 'Hoy',
+        monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+        monthNamesShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+        dayNames: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+        dayNamesShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Juv', 'Vie', 'Sáb'],
+        dayNamesMin: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'],
+        weekHeader: 'Sm',
+        dateFormat: 'dd/mm/yy',
+        firstDay: 1,
+        isRTL: false,
+        showMonthAfterYear: false,
+        yearSuffix: ''
+    }
+	$.datepicker.setDefaults($.datepicker.regional['es']);
+    $("#FechaInicial, #FechaFinal").datepicker({ dateFormat: 'dd-mm-yy' });
+});
+
 function MostrarDatoObser(msg, mTipo=false){
 	$("#DatoObser,#DatoObserRed").hide();
 	if(mTipo){
@@ -1191,6 +1520,112 @@ function documentHeight(){//Obtener el alto de la página
         document.body.offsetHeight,
         document.documentElement.offsetHeight
     );
+}
+
+function DescargarReportes(){
+	MostrarDivModales('Reportes');
+}
+function GenerarReporte(){
+	$("#BotonesModalReportes").hide();
+	mRetorno=true;
+	ele=document.getElementById('FrmReporetes').TipoReporte;if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
+	if(mRetorno){
+		Frm=document.getElementById('FrmReporetes');
+		Frm.TipoGrabar.value='<?php echo md5('JorA7GenerarReporte'.date('d'));?>';
+		Frm.TipoModificar.value='<?php echo md5('ConsultaReporteJorA7'.date('d'));?>';
+		let myData = $("#FrmReporetes").serialize();
+		$.ajax({
+			url:'index.php',
+			type:'post',
+			cache: false,
+			dataType: 'json',
+			data: myData
+		}).done(function(response){
+			if(response.length !== 0){
+				
+      /* 2. Separar Configuración de los Datos */
+      const mCampos = response[0]; // Primer elemento: Metadatos
+      response.shift();            // Eliminar configuración, quedan solo registros
+                
+      // Definimos 'prez' para que el eval() tenga donde trabajar
+      const prez = response; 
+
+      /* 3. Ejecutar el mapeo dinámico (Genera la variable 'rows') */
+      // Esto ejecuta: rows = prez.map(row => ({ ... }));
+      eval(mCampos['Campos']); 
+
+      /* 4. Crear el libro de Excel */
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+
+      /* 5. Aplicar formatos de columna (Fechas) */
+      // Esto ejecuta los formatColumn definidos en PHP
+      eval(mCampos['Formato']); 
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Minutas");
+
+      /* 6. Descargar archivo */
+      XLSX.writeFile(workbook, "Reporte_Minutas.xlsx", {
+        compression: true
+      });
+
+      Swal.close();
+
+				Swal.fire({
+					toast: true,
+					position: "top-end",
+					icon: "success",
+					title: response.message || 'La descarga comenzará en breve.',
+					showConfirmButton: false,
+					timer: 3000
+				});
+				CerrarDivModales('Reportes');
+				$("#BotonesModalReportes").show();
+
+			}else{
+				Swal.fire({
+					toast: true,
+					position: "top-end",
+					icon: "error",
+					title: `Error al generar el reporte: ${response.message}`,
+					showConfirmButton: false,
+					timer: 4000
+				})
+			}
+		}).fail(function(jqXHR, textStatus, errorThrown){
+			Swal.fire({
+				toast: true,
+				position: "top-end",
+				icon: "error",
+				title: `Error en la solicitud: ${textStatus}`,
+				showConfirmButton: false,
+				timer: 4000
+			})
+		});
+	}else{
+		Swal.fire({
+			toast: true,
+			position: "top-end",
+			icon: "error",
+			title: 'Hay inconsistencia en los datos, favor revisar.',
+			showConfirmButton: false,
+			timer: 3000
+		});
+		$("#BotonesModalReportes").show();
+	}
+}
+function formatColumn(worksheet, col, fmt) {
+    const range = XLSX.utils.decode_range(worksheet['!ref'])
+    // note: range.s.r + 1 skips the header row
+    for (let row = range.s.r + 1; row <= range.e.r; ++row) {
+        const ref = XLSX.utils.encode_cell({
+            c: col,
+            r: row
+        })
+        if (worksheet[ref] && worksheet[ref].t === 'n') {
+            worksheet[ref].z = fmt
+        }
+    }
 }
 
 function MostrarDivModales(nomModal) {
@@ -1227,7 +1662,7 @@ function CerrarDivModales(nomModal) {
 </head>
 <body <?php if($_GET['DatoObser']){?>onLoad="MostrarDatoObser('<?php echo $_GET['DatoObser'];?>',true);"<?php }?>>
 
-	<main class="">
+	<main class="overflow-hidden">
 
 		<div class="w-[95%] m-auto bg-green-500 text-white p-4 rounded-lg" id="DatoObser" style="z-index:1000000; display:<?php echo 'none';?>">
 			<b>Success!</b> Indicates a successful or positive action.
@@ -1237,21 +1672,32 @@ function CerrarDivModales(nomModal) {
 			<b>Danger!</b> This alert box could indicate a dangerous or potentially negative action.
 		</div>
 
-		<div class="relative h-screen  md:grid md:grid-cols-1 md:grid-cols-10">
+		<div class="relative h-screen  md:grid md:grid-cols-1 md:grid-cols-10 overflow-hidden">
 
-			<nav class="overflow-auto w-[100vw] md:w-full md:h-full colorBase bottom-0 z-50 flex md:flex-col absolute md:static  md:col-span-2 navbar navbar-default navbar-fixed-top  text-white md:h-screen p-1 md:p-4 md:pt-[60px] transition-all duration-700">
+			<nav class="overflow-auto w-[100vw] md:w-full md:h-full colorBase bottom-0 z-50 flex md:flex-col absolute md:static  md:col-span-2 navbar navbar-default navbar-fixed-top  text-white md:h-screen p-1 md:p-4 md:pt-10 transition-all duration-700">
 				<!-- Brand and toggle get grouped for better mobile display -->
-				<div class="hidden md:block">
-					<button type="button" class="" data-toggle="collapse" data-target=".navbar-ex6-collapse">
-						<span class="sr-only">Desplegar navegación</span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-					</button>
-					<a class="text-white font-bold text-lg hidden md:block" href="#">Departamento De Seguridad</a>
+				<div class="hidden md:block mb-2 pb-2 border-b border-white/20">
+					<div class="flex flex-col items-center gap-y-4">
+						<!-- Logo Container -->
+						<div class="w-[80px] h-[80px] rounded-2xl bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg border border-white/30 hover:from-white/30 hover:to-white/20 transition-all duration-300">
+							<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" fill="#ffffff" viewBox="0 0 24 24">
+								<path d="m20.42 6.11-7.97-4c-.28-.14-.62-.14-.9 0l-7.97 4c-.31.15-.51.45-.55.79-.01.11-.96 10.76 8.55 15.01a.98.98 0 0 0 .82 0C21.91 17.66 20.97 7 20.95 6.9a.98.98 0 0 0-.55-.79ZM12 19.9C5.26 16.63 4.94 9.64 5 7.64l7-3.51 7 3.51c.04 1.99-.33 9.02-7 12.26"></path>
+								<path d="m11 12.59-1.29-1.3-1.42 1.42 2.71 2.7 4.71-4.7-1.42-1.42z"></path>
+							</svg>
+						</div>
+
+						<!-- Title Section -->
+						<div class="text-center space-y-2">
+							<h1 class="text-xl font-semibold text-white tracking-tight leading-tight">
+								Departamento de <span class="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">Seguridad</span>
+							</h1>
+							<!-- <div class="h-1 w-12 bg-gradient-to-r from-blue-300 to-white rounded-full mx-auto"></div> -->
+							<!-- <p class="text-xs text-blue-100 font-medium uppercase tracking-widest">Vigilancia y Control</p> -->
+						</div>
+					</div>
 				</div>
 				<!-- Collect the nav links, forms, and other content for toggling -->
-				<div class="md:mt-8 flex md:flex-col p-2 gap-3 md:justify-between md:h-[calc(100vh-160px)]">
+				<div class="md:mt-2 flex md:flex-col p-2 gap-3 md:justify-between md:h-[calc(100vh-160px)]">
 							<ul class="flex items md:flex-col  gap-6 md:gap-0">
 											<li>
 												<a href="index.php?TipoModificar=<?php echo md5('JorA1'.date('d'));?>">
@@ -1312,21 +1758,30 @@ function CerrarDivModales(nomModal) {
 															</svg>
 														</span>
 														<span class="text-center hidden md:block">Tipos de Receso</span>
-													</button></a></li><?php
+													</button></a></li>
+													<li>
+													<button onclick="DescargarReportes();" class="bg-white/5 md:bg-transparent w-full hover:bg-gray-50/10 p-1 md:px-4 md:py-3 rounded-lg text-white hover:shadow-lg active:scale-95 transition-all flex items-center gap-x-2">
+														<span>
+															<svg  xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" viewBox="0 0 24 24" >
+																<path d="m19.94 7.68-.03-.09a.8.8 0 0 0-.2-.29l-5-5a1 1 0 0 0-.3-.2l-.09-.03a.9.9 0 0 0-.27-.05c-.02 0-.04-.01-.05-.01H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-12s-.01-.04-.01-.06c0-.09-.02-.17-.05-.26ZM6 20V4h7v4c0 .55.45 1 1 1h4v11z"></path><path d="M8 12h2v6H8zm3-2h2v8h-2zm3 4h2v4h-2z"></path>
+															</svg>
+														</span>
+														<span class="text-center hidden md:block">Reportes</span>
+													</button></li><?php
 											}?>
 											
 						</ul>
 						<div>
 							<a href="../home/index.php"><span class="">
 								<button class="bg-white/5 md:bg-transparent w-full hover:bg-gray-50/10 p-1 md:px-4 md:py-3 rounded-lg text-white hover:shadow-lg active:scale-95 transition-all flex items-center gap-x-2">
-												<span>
-													<svg  xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="#ffffff" viewBox="0 0 24 24" >
-														<path d="M15 11H8v2h7v4l6-5-6-5z"></path><path d="M5 21h7v-2H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2"></path>
-													</svg>
-												</span>
-												<span class="text-center hidden md:block">
-													Menú Principal
-												</span>
+									<span>
+										<svg  xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="#ffffff" viewBox="0 0 24 24" >
+											<path d="M15 11H8v2h7v4l6-5-6-5z"></path><path d="M5 21h7v-2H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2"></path>
+										</svg>
+									</span>
+									<span class="text-center hidden md:block">
+										Menú Principal
+									</span>
 								</button>
 							</a>
 						</div>
@@ -1414,6 +1869,146 @@ function CerrarDivModales(nomModal) {
 
             </div>
           </div>
+				</div>
+      </div>
+   </div>
+
+	 <!-- MODAL REPORTES -->
+    <div id="modal-Reportes" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 font-normal">
+      <div id="modal-Reportes-backdrop" class="modal-backdrop absolute inset-0 bg-black/30" onclick="CerrarDivModales('Reportes')"></div>
+        <div id="modal-Reportes-container" class="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden">
+					<div class="bg-gradient-to-br from-blue-600 to-blue-400 p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-x-3">
+
+                  <div class="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                    <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24"  fill="#ffffff" viewBox="0 0 24 24" >
+											<path d="m19.94 7.68-.03-.09a.8.8 0 0 0-.2-.29l-5-5a1 1 0 0 0-.3-.2l-.09-.03a.9.9 0 0 0-.27-.05c-.02 0-.04-.01-.05-.01H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-12s-.01-.04-.01-.06c0-.09-.02-.17-.05-.26ZM6 20V4h7v4c0 .55.45 1 1 1h4v11z"></path><path d="M8 12h2v6H8zm3-2h2v8h-2zm3 4h2v4h-2z"></path>
+                    </svg>
+              		</div>
+             		<div>
+                  <h3 id="ModalReportesTitle" class="text-xl font-bold">Descargar Reporte</h3>
+                  <p class="text-blue-100 text-sm">¿Desea continuar con la descarga del reporte?</p>
+              </div>
+            </div>
+            <button onclick="CerrarDivModales('Reportes')" class="hover:bg-white/20 p-2 rounded-lg transition-colors cursor-pointer">
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+      	</div>
+ 
+      	<div  class="p-6 space-y-4 overflow-y-auto">
+          <form id="FrmReporetes" class="grid grid-cols-1 gap-4">
+							<input name="TipoGrabar" type="hidden" id="TipoGrabar">
+							<input name="TipoModificar" type="hidden" id="TipoModificar">
+
+              <div class="gap-4 grid grid-cols-1 md:grid-cols-2">
+									
+
+								<div class="">
+									<div class="flex items-center gap-2 mb-3">
+										<div class="bg-[#EEF4FF] p-2 rounded-lg flex-shrink-0">
+											<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#2563eb" viewBox="0 0 24 24">
+												<path d="M19 2H5c-.55 0-1 .45-1 1v4H2v2h2v2H2v2h2v2H2v2h2v4c0 .55.45 1 1 1h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2M6 4h8v16H6zm13 16h-3v-2.5h3zm0-4.5h-3V13h3zm0-4.5h-3V8.5h3zm0-4.5h-3V4h3z"></path>
+											</svg>
+										</div>
+										<label for="TipoReporte" class="text-xs font-600 text-slate-500 uppercase tracking-wide">Tipo De Reporte</label>
+									</div>
+									<select name="TipoReporte" id="TipoReporte"
+										class="text-sm w-full px-3 py-2 bg-slate-50 text-slate-700 rounded-lg border border-slate-200 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
+										<option value='TodosLosRegistros' selected>Todos Los Acumulados</option>
+									</select>
+								</div>
+
+								<div class="">
+										<div class="flex items-center gap-2 mb-3">
+											<div class="bg-[#EEF4FF] p-2 rounded-lg flex-shrink-0">
+												<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#2563eb" viewBox="0 0 24 24">
+													<path d="M21 4c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2v6H5c-1.1 0-2 .9-2 2v9c0 .55.45 1 1 1h16c.55 0 1-.45 1-1zM5 12h6v8H5zm14 8h-6v-8c0-1.1-.9-2-2-2H9V4h10z"/><path d="M11 6h2v2h-2zm4 0h2v2h-2zm0 4.03h2V12h-2zM15 14h2v2h-2zm-8 0h2v2H7z"/>
+												</svg>
+											</div>
+											<label for="SucursalFiltro" class="text-xs font-600 text-slate-500 uppercase tracking-wide">Sucursal</label>
+										</div>
+										<select name="SucursalFiltro" id="SucursalFiltro"
+											class="text-sm w-full px-3 py-2 bg-slate-50 text-slate-700 rounded-lg border border-slate-200 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+											onChange="CambioSucursal(this.value);">
+											<option value='' selected>— Seleccionar sucursal —</option>
+												<?php
+												$Queri = "SELECT DISTINCT Sucursal.Sucursal, Sucursal.NomSucursal
+													FROM ".$PrefBD."novasoft.sucursal Sucursal
+													JOIN ".$PrefBD."solicitudes.vigilanciapuestosucursal PuestoSucursal ON Sucursal.Sucursal=PuestoSucursal.Sucursal
+													WHERE Sucursal.Sucursal<>'0'
+													ORDER BY Sucursal.Sucursal";
+													$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
+													while($Row = $Result->fetch_assoc()){?>
+												<option value='<?php echo $Row['Sucursal'];?>'><?php echo $Row['Sucursal'].' '.$Row['NomSucursal'];?></option>
+											<?php }?>
+										</select>
+									</div>
+
+								<div class="">
+									<div class="flex items-center gap-2 mb-3">
+										<div class="bg-[#EEF4FF] p-2 rounded-lg flex-shrink-0">
+											<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#2563eb" viewBox="0 0 24 24">
+												<path d="M19 4h-2V2h-2v2H9V2H7v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8c.13 0 .26-.03.38-.08s.23-.12.33-.22l7-7c.09-.09.15-.19.2-.29l.03-.09c.03-.08.05-.17.05-.26 0-.02.01-.04.01-.06V6c0-1.1-.9-2-2-2m0 9h-6c-.55 0-1 .45-1 1v6H5V8h14z"/>
+											</svg>
+										</div>
+										<label for="FechaInicial" class="text-xs font-600 text-slate-500 uppercase tracking-wide">Fecha Inicial</label>
+									</div>
+									<input name="FechaInicial" type="text" id="FechaInicial"
+										class="text-sm w-full px-3 py-2 bg-slate-50 text-slate-700 rounded-lg border border-slate-200 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+									onBlur="ValidarFecha(this);" autocomplete="off" placeholder="Fecha Inicial" >
+								</div>
+
+								<div class="">
+									<div class="flex items-center gap-2 mb-3">
+										<div class="bg-[#EEF4FF] p-2 rounded-lg flex-shrink-0">
+											<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#2563eb" viewBox="0 0 24 24">
+												<path d="M19 4h-2V2h-2v2H9V2H7v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8c.13 0 .26-.03.38-.08s.23-.12.33-.22l7-7c.09-.09.15-.19.2-.29l.03-.09c.03-.08.05-.17.05-.26 0-.02.01-.04.01-.06V6c0-1.1-.9-2-2-2m0 9h-6c-.55 0-1 .45-1 1v6H5V8h14z"/>
+											</svg>
+										</div>
+										<label for="FechaFinal" class="text-xs font-600 text-slate-500 uppercase tracking-wide">Fecha Final</label>
+									</div>
+									<input name="FechaFinal" type="text" id="FechaFinal"
+										class="text-sm w-full px-3 py-2 bg-slate-50 text-slate-700 rounded-lg border border-slate-200 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+									onBlur="ValidarFecha(this);" autocomplete="off" placeholder="Fecha Final" >
+								</div>
+
+								<!-- Puesto -->
+								<div class="">
+									<div class="flex items-center gap-2 mb-3">
+										<div class="bg-[#EEF4FF] p-2 rounded-lg flex-shrink-0">
+											<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#2563eb" viewBox="0 0 24 24">
+												<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2M5 19V5h14v14z"></path><path d="m16.6 11.39-2.77-1.23-1.23-2.77a.68.68 0 0 0-.6-.4c-.27-.02-.5.15-.61.39l-1.23 2.67-2.78 1.34c-.23.11-.38.35-.38.61s.16.49.4.6l2.77 1.23 1.23 2.77a.663.663 0 0 0 1.22 0l1.23-2.77 2.77-1.23c.24-.11.4-.35.4-.61s-.16-.5-.4-.61Z"></path>
+											</svg>
+										</div>
+										<label for="EstadoReporte" class="text-xs font-600 text-slate-500 uppercase tracking-wide">Estado</label>
+									</div>
+									<select name="EstadoReporte" id="EstadoReporte"
+										class="text-sm w-full px-3 py-2 bg-slate-50 text-slate-700 rounded-lg border border-slate-200 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+										>
+										<option value="">Estado</option>
+										<option value="recibida">Recibida</option>
+										<option value="en_proceso">En Proceso</option>
+										<option value="finalizada">Finalizada</option>
+									</select>
+								</div>
+								
+              </div>
+
+              <div class="flex gap-3 pt-4" id="BotonesModalReportes">
+									<button type="button" onclick="CerrarDivModales('Reportes')"
+										class=" flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-all active:scale-95">
+										Cerrar
+									</button>
+									<button  type="button" onclick="GenerarReporte();" 
+										class=" flex-1 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-400 hover:shadow-lg text-white font-semibold rounded-lg transition-all active:scale-95">
+										<span>Continuar</span>
+									</button>
+              </div>
+          </form>
 				</div>
       </div>
    </div>

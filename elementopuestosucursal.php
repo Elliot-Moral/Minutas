@@ -4,6 +4,7 @@ function CambioSucursal(mSucursal){
 	if(!mObIDPuestoSucursal){
 		return
 	}
+	mObIDPuestoSucursal.classList.remove("hidden");
 	mValOld=mObIDPuestoSucursal.value;
 	mObIDPuestoSucursal.length=0;
 	mObIDPuestoSucursal.add(new Option('--Puesto--', '', true));
@@ -24,17 +25,52 @@ function CambioSucursal(mSucursal){
 	FiltrarPuestoSucursalElemento();
 }
 function FiltrarPuestoSucursalElemento(){
-	mSucursal=document.getElementById('Sucursal').value;
-	mIDPuestoSucursal=document.getElementById('IDPuestoSucursal').value;
+	const mSucursal=document.getElementById('Sucursal').value;
+	const mIDPuestoSucursal=document.getElementById('IDPuestoSucursal').value;
+	const mFiltroElemento=document.getElementById("FiltroElemento");
+
+	if(mIDPuestoSucursal !=''){
+		mFiltroElemento.classList.remove("hidden");
+	}
+
 	if(mSucursal && mIDPuestoSucursal){
 		$('#TBodyPuestoSucursalElemento').load("index.php?TipoModificar=<?php echo md5('Ajax1JorA5PuestoSucursalElemento'.date('d'));?>&Sucursal="+mSucursal+"&IDPuestoSucursal="+mIDPuestoSucursal,
 												function() {
 													MostrarSoloActivos(0);
 												});
 	}else{
-		document.getElementById('TBodyPuestoSucursalElemento').innerHTML="<tr><td>Nada</td></tr>";
+		document.getElementById('TBodyPuestoSucursalElemento').innerHTML = `
+    <tr>
+        <td colspan="100%" style="text-align: center; vertical-align: middle; padding: 20px; color: #6c757d;">
+            <i class="bi bi-info-circle"></i> No se encontraron registros
+        </td>
+    </tr>`;
 	}
 }
+
+function FiltrarElemento(){
+	mSucursal=document.getElementById("Sucursal").value;
+	console.log(mSucursal);
+	if(!mSucursal){
+		document.getElementById('TBodyPuestoSucursalElemento').innerHTML = `
+    <tr>
+        <td colspan="100%" style="text-align: center; vertical-align: middle; padding: 20px; color: #6c757d;">
+            <i class="bi bi-info-circle"></i> No se encontraron registros
+        </td>
+    </tr>`;
+	}
+
+	const mFiltroElemento=document.getElementById("FiltroElemento").value.toLowerCase();
+	$("#TBodyPuestoSucursalElemento").find("tr").each(function(){
+		const mTextoElemento=$(this).find("td:eq(5)").text().toLowerCase();
+		if(mTextoElemento.includes(mFiltroElemento)){
+			$(this).show();
+		}else{
+			$(this).hide();
+		}
+	});
+}
+
 function MostrarSoloActivos(mCambiar){
 	if(mCambiar){//Es porque dieron click para mostrar solo activos o todos, el texto del TH cambia
 		if(document.getElementById('THSoloActivos').innerHTML=='Todos'){
@@ -101,7 +137,14 @@ function EnviarPuestoSucursalElemento(Obj,mIDElemento,mIDElementoPuestoSucursal)
 			if(html){
 				MostrarDatoObser(html);
 			}else{
-				MostrarDatoObser("Dato grabado.",true);
+				Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: 'Dato guardados',
+          showConfirmButton: false,
+          timer: 3000
+				});
 			}
 		});
 	}
@@ -151,10 +194,14 @@ function EnviarPuestoSucursalElemento(Obj,mIDElemento,mIDElementoPuestoSucursal)
 				}?>
 			</select>
 		</div>
-		<div >
-			<select name="IDPuestoSucursal" id="IDPuestoSucursal" class="block w-full max-w-64 ps-3 pe-3 py-2 text-gray-500 rounded-lg border border-default-medium text-heading text-sm shadow-xs placeholder:text-body outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all"  
+		<div>
+			<select name="IDPuestoSucursal" id="IDPuestoSucursal" class="hidden block w-full max-w-98 ps-3 pe-3 py-2 text-gray-500 rounded-lg border border-default-medium text-heading text-sm shadow-xs placeholder:text-body outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all"  
 			onChange="FiltrarPuestoSucursalElemento();">
 			</select>
+		</div>
+		<div>
+			<input name="FiltroElemento" type="text" class="hidden block w-full max-w-64 ps-3 pe-3 py-2 text-gray-500 rounded-lg border border-default-medium text-heading text-sm shadow-xs placeholder:text-body outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all"  
+			id="FiltroElemento" placeholder="Filtrar Elemento" onChange="FiltrarElemento();">
 		</div>
 		<div>
 				<button onClick="FiltrarElemento();"
@@ -164,17 +211,9 @@ function EnviarPuestoSucursalElemento(Obj,mIDElemento,mIDElementoPuestoSucursal)
 					</svg>
 				</button>
 		</div>
-		<div>
-				<div onClick="MostrarDivElemento('Nuevo');"
-					class="cursor-pointer bg-gradient-to-br from-blue-700 to-blue-400 px-4 py-2 rounded-lg text-white hover:shadow-lg active:scale-95 transition-all font-semibold flex items-center gap-x-2">
-					<svg  xmlns="http://www.w3.org/2000/svg" width="19" height="19" fill="#ffffff" viewBox="0 0 24 24" >
-						<path d="M3 13h8v8h2v-8h8v-2h-8V3h-2v8H3z"></path>
-					</svg>
-				</div>
-		</div>
 	</div>
 
-	<div class="mt-4 rounded-t-xl border border-gray-200 text-sm text-gray-600 overflow-x-auto h-[10vh] md:h-[72vh]">
+	<div class="mt-4 rounded-t-xl border border-gray-200 text-sm text-gray-600 overflow-x-auto h-[74vh] md:h-[72vh]">
 		<table class="table table-striped table-bordered">
 			<thead class="bg-gray-100  rounded-t-lg shadow-xs sticky top-0 z-10">
 				<tr>

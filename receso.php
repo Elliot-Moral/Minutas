@@ -25,7 +25,8 @@ function FiltrarReceso(){
 	mFiltro = document.getElementById('FiltroReceso').value.toUpperCase();
 	if(mFiltro){
 		$("#TBodyReceso").find("tr").each(function(){
-			if((mFiltro ? ($(this).find("td:eq(1):contains('"+mFiltro+"')").length) : true)){
+			let cellText = $(this).find("td:eq(1)").text().toUpperCase();
+			if(cellText.includes(mFiltro)){
 				$(this).show();
 			}else{
 				$(this).hide();
@@ -201,12 +202,12 @@ function EnviarReceso(){//Enviar los datos del pago en un ajax
 					<tr class="bg-white border-t border-gray-200">
 						<td class="p-2 text-center" left>
 							<div class="inline-flex items-center gap-3 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg group hover:bg-white transition-colors">
-							<div class="flex flex-col">
-								<span class="text-[12px] font-mono font-bold text-slate-700 leading-none tracking-tight">
-									<?php echo $Row['IDReceso'];?>
-								</span>
+								<div class="flex flex-col">
+									<span class="text-[12px] font-mono font-bold text-slate-700 leading-none tracking-tight">
+										<?php echo $Row['IDReceso'];?>
+									</span>
+								</div>
 							</div>
-						</div>
 						</td>
 						<td class="p-2 text-center"><?php echo $Row['Receso'];?></td>
 						<td class="p-2 text-center" align="center">						

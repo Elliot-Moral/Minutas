@@ -39,9 +39,11 @@
 .glyphicon {
     font-size: 18px;
 }
+.ui-datepicker {
+    z-index: 150 !important;
+}
 </style>
 <!--Para la firma-->
-<link rel="stylesheet" href="../librerias/firma/css/signature-pad-jorge.css">
 <script type="text/javascript">
 $(document).ready(function(){
 	$("select,input,textarea").change(function(){
@@ -77,7 +79,7 @@ $(function(){//Para Fechas
         yearSuffix: ''
     }
 	$.datepicker.setDefaults($.datepicker.regional['es']);
-    $( "#FiltroFecha1,#FiltroFecha2").datepicker({ dateFormat: 'dd-mm-yy' });
+    $( "#FiltroFecha1,#FiltroFecha2, #FechaInicial, #FechaFinal").datepicker({ dateFormat: 'dd-mm-yy' });
 });
 function documentHeight(){//Obtener el alto de la página
     return Math.max(
@@ -203,13 +205,14 @@ function CrearMinuta(){
 	});
 }
 function EditarMinuta(mIDMinuta, Editando = true) {
-	console.log(mIDMinuta, Editando);
-
 	$('#Frm0,#Frm1,#Frm2').trigger("reset");
 	$('#Frm0,#Frm1,#Frm2').find("input[id='IDMinuta']").each(function() {
 		$(this).val(mIDMinuta);
 	});
-	$("#Frm0,#Frm1,#Frm2").find("input:text,select,textarea").removeClass("alert-danger");
+
+	$("#Frm0,#Frm1,#Frm2").find("input:text,select,textarea").each(function(){
+		this.classList.remove(...estilos.requeired);
+	});
 	
 	if(mIDMinuta > 0) {
 		$('#Sucursal,#IDPuestoSucursal').attr('disabled', true);
@@ -261,20 +264,30 @@ function EditarMinuta(mIDMinuta, Editando = true) {
 						$('#DivMostrarMinuta').find(".tab").show();
 						$('#DivMostrarMinuta').find("select,:checkbox").attr("disabled", true);
 						$('#DivMostrarMinuta').find("input:text,textarea").attr("readonly", true);
+						InhabilitarInput();
 						MostrarDivModales('verDetalles');
 						document.getElementById("nextBtn").style.display = "none";
+							
 					}
 				}
 			},
 			sync: true,
 			error: function(data) {
-				MostrarDatoObser("Se presentó un error");
+				Swal.fire({
+						title: 'Error',
+						text: 'Se presentó un error al cargar la minuta.',
+						icon: 'error',
+						confirmButtonText: 'Aceptar',
+						confirmButtonColor: '#0e69ca'
+					});
 				return false;
 			}
 		});
 	} else {
 		// Minuta nueva - solo mostrar primer tab
-		$('#Sucursal,#IDPuestoSucursal').attr('disabled', false);
+		$('#Sucursal,#IDPuestoSucursal,#VigilanteEntrante,#VigilanteSaliente,#Turno').attr('disabled', false);
+		$('#Sucursal,#IDPuestoSucursal,#VigilanteEntrante,#VigilanteSaliente,#Turno').attr('readonly', false);
+
 		document.getElementById('Fecha').value = '<?php echo date('d-m-Y');?>';
 		document.getElementById('HoraInicio').value = '<?php echo date('H:i');?>';
 		
@@ -293,6 +306,17 @@ function EditarMinuta(mIDMinuta, Editando = true) {
 		MostrarDivModales('verDetalles');
 		document.getElementById("nextBtn").style.display = "block";
 	}
+}
+
+function InhabilitarInput(){
+	setTimeout(() => {
+		const cuerpoTabla = document.getElementById("TBodyListaChequeo");
+		const inputs = cuerpoTabla.querySelectorAll("input, select, textarea");
+		console.log(inputs);
+		inputs.forEach(input => {
+				input.disabled = true;
+		});
+	}, 1000);
 }
 
 var currentTab = 0;
@@ -378,20 +402,29 @@ function validateForm(){
 		}
 	}else if(currentTab==1){	//1  LISTA DE CHEQUEO - Verificación de sede de acuerdo a puesto asumido
 		$('#TBodyListaChequeo').find("input[id^='CantidadReal']").each(function(){
+			
 			mID=$(this).attr('id');
 			mID=mID.replace("CantidadReal", "");
-			ele=document.getElementById('CantidadVerificada' + mID);if(ele.value.length>0){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
+			let tr=document.getElementsByName("Elemento_" + mID)[0];
 			mCantidadReal=parseInt(document.getElementById('CantidadReal' + mID).value,10);
-			if(isNaN(mCantidadReal)){
-				mCantidadReal=0;
+			
+			const esFilaVacia = tr.classList.contains('elementovacio');
+			
+      if(!esFilaVacia){
+				ele=document.getElementById('CantidadVerificada' + mID);if(ele.value.length>0){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
+
+					if(isNaN(mCantidadReal)){
+						mCantidadReal=0;
+					}
+					CantidadVerificada=parseInt(document.getElementById('CantidadVerificada' + mID).value,10);
+					if(isNaN(CantidadVerificada)){
+						CantidadVerificada=0;
+					}
+					if(mCantidadReal!=CantidadVerificada && document.getElementById('CantidadVerificada' + mID).value.length>0){
+						ele=document.getElementById('ObsVerifica' + mID);if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
+					}
 			}
-			CantidadVerificada=parseInt(document.getElementById('CantidadVerificada' + mID).value,10);
-			if(isNaN(CantidadVerificada)){
-				CantidadVerificada=0;
-			}
-			if(mCantidadReal!=CantidadVerificada && document.getElementById('CantidadVerificada' + mID).value.length>0){
-				ele=document.getElementById('ObsVerifica' + mID);if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
-			}
+				
 		});
 		//Los datos no se graban acá, para este form se graban campo a campo, por cambio
 	}else if(currentTab==2){	//2	REQUISA A VIGILANTE SALIENTE  - Finalizar Crear Minuta por Puesto y Turno
@@ -501,9 +534,9 @@ function CambioPuestoSucursalElemento(){
 	/* Aquí se actualiza el form con los elementos para este puesto*/
 	if(mSucursal && mIDPuestoSucursal){
 		$('#TBodyListaChequeo').load("index.php?TipoModificar=<?php echo md5('Ajax2JorA6ElementosEditarMinuta'.date('d'));?>&Sucursal="+
-												mSucursal+"&IDPuestoSucursal="+
-												mIDPuestoSucursal+"&IDMinuta="+mIDMinuta
-												);
+			mSucursal+"&IDPuestoSucursal="+
+			mIDPuestoSucursal+"&IDMinuta="+mIDMinuta
+		);
 	}else{
 		document.getElementById('TBodyPuestoSucursalElemento').innerHTML="<tr><td>Nada</td></tr>";
 	}
@@ -561,6 +594,35 @@ function EnviarMinutaElemento(Obj){
 		}
 	}
 }
+
+function MonstrarElementosVacios() {
+	let trVacias = document.querySelectorAll('.elementovacio');
+	trVacias.forEach(fila => {
+		if(fila.classList.contains('hidden')) {
+			fila.classList.remove('hidden');
+				Swal.fire({
+						toast: true,
+						position: "top-end",
+						icon: "success",
+						title: "Elementos vacíos mostrados.",
+						showConfirmButton: false,
+						timer: 3000
+					});
+			return;
+		}else{
+			fila.classList.add('hidden');
+				Swal.fire({
+						toast: true,
+						position: "top-end",
+						icon: "success",
+						title: "Elementos vacíos ocultos.",
+						showConfirmButton: false,
+						timer: 3000
+					});
+		}
+	});
+	
+}
 /******************************************
 RECESOS
 *******************************************/
@@ -587,7 +649,13 @@ function EditarReceso(mIDMinutaReceso){
 			dataType: 'json',
 			success: function(data){ //Si se ejecuta correctamente
 				if(data.Mensaje=="Error"){
-					MostrarDatoObser("Se presentó un error");
+					Swal.fire({
+						title: 'Error',
+						text: 'Se presentó un error al cargar el receso.',
+						icon: 'error',
+						confirmButtonText: 'Aceptar',
+						confirmButtonColor: '#0e69ca'
+					});
 					return false;
 				}else{
 					document.getElementById('FrmReceso').HoraInicioReceso.value = data.HoraInicioReceso;
@@ -598,18 +666,20 @@ function EditarReceso(mIDMinutaReceso){
 				}
 			},
 			error: function(data){
-				MostrarDatoObser("Se presentó un error");
+				Swal.fire({
+					title: 'Error',
+					text: 'Se presentó un error en la conexión con el servidor.',
+					icon: 'error',
+					confirmButtonText: 'Aceptar',
+					confirmButtonColor: '#0e69ca'
+				});
 				return false;
 			}
 		});
 	}
-	const formReceso = document.getElementById('DivFormReceso');
-	formReceso.classList.remove('hidden');
-	
-	gsap.fromTo(formReceso, 
-		{ opacity: 0, y: 20, scale: 0.95 },
-		{ opacity: 1, y: 0, scale: 1, duration: 0.4, ease: 'back.out(1.7)' }
-	);
+
+	MostrarDivModales('GuardarRotaciones');
+
 }
 function GrabarReceso(){
 	mRetorno=true;
@@ -631,7 +701,7 @@ function GrabarReceso(){
 			data: myData
 		}).done(function(html){
 			$("#BotsReceso").show();
-			document.getElementById('DivFormReceso').classList.add('hidden');
+			CerrarDivModales('GuardarRotaciones');
 			mIDMinuta=document.getElementById('FrmReceso').IDMinuta.value;
 			MostrarModalListaRecesos(mIDMinuta);
 		});
@@ -739,11 +809,7 @@ function EditarNovedad(mIDMinutaNovedad){
 			}
 		});
 	}
-	document.getElementById('DivFormNovedad').classList.remove('hidden');
-	gsap.fromTo('#DivFormNovedad', 
-		{ opacity: 0, y: 20, scale: 0.95 },
-		{ opacity: 1, y: 0, scale: 1, duration: 0.4, ease: 'back.out(1.7)' }
-	);
+	MostrarDivModales('GuardarNovedades');
 }
 function GrabarNovedad(){
 	$("#BotsNovedad").hide();
@@ -756,14 +822,14 @@ function GrabarNovedad(){
 		Frm=document.getElementById('FrmNovedad');
 		Frm.TipoGrabar.value='<?php echo md5('JorA6GrabarNovedad'.date('d'));?>';
 		Frm.TipoModificar.value='<?php echo md5('GrabarNovedadJorA6'.date('d'));?>';
-		var myData = $("#FrmNovedad").serialize();
+		let myData = $("#FrmNovedad").serialize();
 		$.ajax({
 			url:'index.php',
 			type:'post',
 			cache: false,
 			data: myData
 		}).done(function(html){
-				Swal.fire({
+			Swal.fire({
 				toast: true,
 				position: "top-end",
 				icon: "success",
@@ -771,12 +837,19 @@ function GrabarNovedad(){
 				showConfirmButton: false,
 				timer: 3000
 			});
-			document.getElementById('DivFormNovedad').classList.add('hidden');
+			CerrarDivModales('GuardarNovedades');
 			mIDMinuta=document.getElementById('FrmNovedad').IDMinuta.value;
 			MostrarModalListaNovedades(mIDMinuta);
 			$("#BotsNovedad").show();
 			if(html){
-				MostrarDatoObser(html);
+				Swal.fire({
+					toast: true,
+					position: "top-end",
+					icon: "error",
+					title: `Error al grabar la novedad: ${html}`,
+					showConfirmButton: false,
+					timer: 4000
+				})
 			}
 		});
 	}else{
@@ -901,45 +974,6 @@ function FirmarMinuta(mIDMinuta=0,mTipoFirma=''){
 	$("#FrmFirma").find("input:text,select,textarea").removeClass(...estilos.requeired);//Ojo, solo se deben incluir en input los text, porque se pierden los efectos de los botones
 	document.getElementById('FrmFirma').IDMinuta.value=mIDMinuta;
 	document.getElementById('FrmFirma').TipoFirma.value=mTipoFirma;
-	
-	const canvas = document.getElementById('CanvasFirma');
-	const context = canvas.getContext('2d');
-
-	let initialX;
-	let initialY;
-
-	const dibujar = (cursorX, cursorY) => {
-		context.beginPath();
-		context.moveTo(initialX, initialY);
-		context.lineWidth = 2;
-		context.strokeStyle = '#000';
-		context.lineCap = 'round';
-		context.lineJoin = 'round';
-		context.lineTo(cursorX, cursorY);
-		context.stroke();
-
-		initialX = cursorX;
-		initialY = cursorY;
-	};
-
-	const mouseDown = (event) => {
-		initialX = event.offsetX;
-		initialY = event.offsetY;
-		dibujar(initialX, initialY);
-		canvas.addEventListener('mousemove', mouseMove);
-	};
-
-	const mouseMove = (event) => {
-		dibujar(event.offsetX, event.offsetY);
-	};
-			
-	const mouseUp = () => {
-		canvas.removeEventListener('mousemove', mouseMove);
-	};
-
-	canvas.addEventListener('mousedown', mouseDown);
-	canvas.addEventListener('mouseup', mouseUp);
-
 	MostrarDivModales('Firmar');
 }
 
@@ -948,7 +982,6 @@ function deshacerFirma(){
 	const context = canvas.getContext('2d');
 	context.clearRect(0, 0, canvas.width, canvas.height);
 }
-
 
 function EnviarFirma(){
 	mRetorno=true;
@@ -1045,15 +1078,9 @@ function CerrarDivModales(nomModal) {
 		$Filtrico .= $Filtrico." AND (Minuta.Elabora='".$_SESSION['Usuario']."' OR Minuta.VigilanteEntrante='".$_SESSION['Usuario']."' OR Minuta.VigilanteSaliente='".$_SESSION['Usuario']."')";
 	}
 	//Por si acaso, optimizo las variables para el filtro por fecha
-	if($_POST['FiltroFecha1'] and $_POST['FiltroFecha2']){
-		//Nothing bhere
-	}elseif($_POST['FiltroFecha1']){
-		$_POST['FiltroFecha2']=$_POST['FiltroFecha1'];
-	}elseif($_POST['FiltroFecha2']){
-		$_POST['FiltroFecha1']=$_POST['FiltroFecha2'];
-	}
-	if($_POST['FiltroFecha1'] and $_POST['FiltroFecha2']){
-		$Filtrico .= $Filtrico." AND LEFT(Minuta.Fecha,10) BETWEEN '".DarFechaSQL($_POST['FiltroFecha1'])."' AND '".DarFechaSQL($_POST['FiltroFecha2'])."'";
+	
+	if($_GET['FiltroFecha1'] and $_GET['FiltroFecha2']){
+		$Filtrico .= $Filtrico." AND LEFT(Minuta.Fecha,10) BETWEEN '".DarFechaSQL($_GET['FiltroFecha1'])."' AND '".DarFechaSQL($_GET['FiltroFecha2'])."'";
 	}
 	//Ahora si ejecutó la consulta
 	$Queri = "SELECT Minuta.*, Puesto.Puesto, Sucursal.NomSucursal,
@@ -1069,7 +1096,9 @@ function CerrarDivModales(nomModal) {
 				LEFT JOIN ".$PrefBD."solicitudes.vigilanciapuesto Puesto ON PuestoSucursal.IDPuesto=Puesto.IDPuesto
 				WHERE Minuta.IDMinuta ".$Filtrico."
 				ORDER BY Minuta.Fecha DESC";
-	$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));?>
+	$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
+	// echo '<pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; font-family: monospace; font-size: 12px;">'.htmlspecialchars($Queri).'</pre>';
+	?>
 
 	<h1 class="text-2xl font-bold mb-0 text-gray-600">Administrar Minutas</h1>
   <hr>
@@ -1421,7 +1450,7 @@ function CerrarDivModales(nomModal) {
 </section>
 
 
-<!--VENTANA MODAL PARA LISTAR ROTACIONES EN LA MINUTA-->
+<!--VENTANA MODAL PARA LIST ROTACIONES EN LA MINUTA-->
 <div id="modal-Rotaciones" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 font-normal">
     <div id="modal-Rotaciones-backdrop" class="modal-backdrop absolute inset-0 bg-black/30 " onclick="CerrarDivModales('Rotaciones')"></div>
     <div id="modal-Rotaciones-container" class="relative bg-white rounded-2xl shadow-2xl  w-full  md:max-w-[70%] overflow-hidden">
@@ -1437,7 +1466,7 @@ function CerrarDivModales(nomModal) {
                     </div>
                     <div>
                         <h3 id="modal-rotaciones-title" class="text-xl">Registro de rotaciones (recesos)</h3>
-                        <p class="text-blue-100 text-sm">Asignado a puesto</p>
+                        <p class="text-blue-100 text-sm">Lista de rotaciones en la minuta</p>
                     </div>
                 </div>
 
@@ -1466,10 +1495,51 @@ function CerrarDivModales(nomModal) {
 							<!-- cuerpo de los datos -->
 							<div class="overflow-y-auto w-full" id="DivRecesos">
 							</div>
+						</div>
 
+						<div class="flex gap-3 pt-4">
+								<button type="button" onclick="CerrarDivModales('Rotaciones')"
+									class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-all active:scale-95">
+									Cerrar
+								</button>
+							</div>
+        </div>
+    </div>
+</div>
+<!--VENTANA MODAL 2 PARA GUARDAR ROTACIONES EN LA MINUTA-->
+<div id="modal-GuardarRotaciones" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 font-normal">
+    <div id="modal-GuardarRotaciones-backdrop" class="modal-backdrop absolute inset-0 bg-black/30 " onclick="CerrarDivModales('GuardarRotaciones')"></div>
+    <div id="modal-GuardarRotaciones-container" class="relative bg-white rounded-2xl shadow-2xl  w-full  md:max-w-[70%] overflow-hidden">
+        <div class="bg-gradient-to-br from-blue-600 to-blue-400 p-6 text-white">
+            <div class="flex items-center justify-between">
+
+                <div class="flex items-center gap-x-3">
+                    <div class="hidden md:block bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                        <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24"  
+													fill="#ffffff" viewBox="0 0 24 24" >
+													<path d="M14 7 9 3v3H8c-3.31 0-6 2.69-6 6s2.69 6 6 6v-2c-2.21 0-4-1.79-4-4s1.79-4 4-4h1v3zm2-1v2c2.21 0 4 1.79 4 4s-1.79 4-4 4h-1v-3l-5 4 5 4v-3h1c3.31 0 6-2.69 6-6s-2.69-6-6-6"></path>
+												</svg>
+                    </div>
+                    <div>
+                        <h3 id="modal-GuardarRotaciones-title" class="text-xl">Guardar Rotaciones</h3>
+                        <p class="text-blue-100 text-sm">Asignado a puesto</p>
+                    </div>
+                </div>
+
+                <button onclick="CerrarDivModales('GuardarRotaciones')" class="hover:bg-white/20 p-2 rounded-lg transition-colors cursor-pointer">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+				<form id="FrmReceso" class="p-6 space-y-4 overflow-y-auto max-h-[75vh]">
+            <div class="grid grid-cols-1 gap-4">
+	
 							<!-- Formulario de crear/editar rotaciones -->
-							<div class="hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6" id="DivFormReceso">
-									<form action="" id="FrmReceso" class="space-y-6">
+							<div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6">
+									<div action="" class="space-y-6">
 											<!-- Hidden Inputs -->
 											<input name="TipoGrabar" type="hidden" id="TipoGrabar">
 											<input name="TipoModificar" type="hidden" id="TipoModificar">
@@ -1523,32 +1593,21 @@ function CerrarDivModales(nomModal) {
 																	class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
 													</div>
 											</div>
-
-											<!-- Botones de Acción -->
-											<div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-													<button type="button" id="BotCancelarReceso" onClick="document.getElementById('DivFormReceso').classList.add('hidden');"
-															class="px-5 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all">
-															Cancelar
-													</button>
-													<button type="button" id="BotsReceso" onClick="GrabarReceso();"
-															class="cursor-pointer bg-gradient-to-br from-blue-700 to-blue-400 px-4 py-1.5 rounded-lg text-white hover:shadow-lg active:scale-95 transition-all font-semibold flex items-center gap-x-2">
-															<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-															</svg>
-															Grabar Registro
-													</button>
-											</div>
-									</form>
+									</div>
 							</div>
 						</div>
 
-						<div class="flex gap-3 pt-4">
-								<button type="button" onclick="CerrarDivModales('Rotaciones')"
+						<div class="flex gap-3 pt-4" id="BotsReceso">
+								<button type="button" onclick="CerrarDivModales('GuardarRotaciones')"
 									class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-all active:scale-95">
 									Cerrar
 								</button>
+								<button  type="button" onClick="GrabarReceso();"
+									class="bottonConfirmacion flex-1 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-400 hover:shadow-lg text-white font-semibold rounded-lg transition-all active:scale-95">
+										<span>Guardar Rotacion</span>
+								</button>
 							</div>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -1598,9 +1657,52 @@ function CerrarDivModales(nomModal) {
 							<div class="overflow-y-auto w-full" id="DivNovedades">
 							</div>
 
-							<!-- Formulario de crear/editar novedades -->
-							<div class="hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6" id="DivFormNovedad">
-									<form action="" id="FrmNovedad" class="space-y-6">
+						</div>
+
+						<div class="flex gap-3 pt-4">
+								<button type="button" onclick="CerrarDivModales('Novedades')"
+									class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-all active:scale-95">
+									Cerrar
+								</button>
+							</div>
+        </div>
+    </div>
+</div>
+
+<!--VENTANA MODAL PARA GUARDAR NOVEDADES EN LA MINUTA-->
+<div id="modal-GuardarNovedades" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 font-normal">
+    <div id="modal-GuardarNovedades-backdrop" class="modal-backdrop absolute inset-0 bg-black/30 " onclick="CerrarDivModales('GuardarNovedades')"></div>
+    <div id="modal-GuardarNovedades-container" class="relative bg-white rounded-2xl shadow-2xl w-full md:max-w-[70%] overflow-hidden">
+        <div class="bg-gradient-to-br from-blue-600 to-blue-400 p-6 text-white">
+            <div class="flex items-center justify-between">
+
+                <div class="flex items-center gap-x-3">
+                    <div class="hidden md:block bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                        <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24"  
+													fill="#ffffff" viewBox="0 0 24 24" >
+													<path d="M20 3H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h3v2c0 .36.19.69.51.87a1 1 0 0 0 1-.01L13.27 19h6.72c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Zm0 14h-7c-.18 0-.36.05-.51.14L9 19.23V18c0-.55-.45-1-1-1H4V5h16z"></path><path d="M11 7h2v4.5h-2zm0 6h2v2h-2z"></path>
+												</svg>
+                    </div>
+                    <div>
+                        <h3 id="modal-GuardarNovedades-title" class="text-xl">Guardar Novedades</h3>
+                        <p class="text-blue-100 text-sm">Registra las novedades correspondientes al turno actual.</p>
+                    </div>
+                </div>
+
+                <button onclick="CerrarDivModales('GuardarNovedades')" class="hover:bg-white/20 p-2 rounded-lg transition-colors cursor-pointer">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+				<!-- Formulario de crear/editar novedades -->
+				<form id="FrmNovedad" class="p-6 space-y-4 overflow-y-auto max-h-[75vh]">
+            <div class="grid grid-cols-1 gap-4">
+
+							<div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6" >
+									<div class="space-y-6">
 											<!-- Hidden Inputs -->
 											<input name="TipoGrabar" type="hidden" id="TipoGrabar">
 											<input name="TipoModificar" type="hidden" id="TipoModificar">
@@ -1638,32 +1740,22 @@ function CerrarDivModales(nomModal) {
 																	class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
 													</div>
 											</div>
-
-											<!-- Botones de Acción -->
-											<div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100" id="BotsNovedad">
-													<button type="button" id="BotCancelarNovedad" onClick="document.getElementById('DivFormNovedad').classList.add('hidden');"
-															class="px-5 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all">
-															Cancelar
-													</button>
-													<button type="button" id="BotAceptarNovedad" onClick="GrabarNovedad();"
-															class="cursor-pointer bg-gradient-to-br from-blue-700 to-blue-400 px-4 py-1.5 rounded-lg text-white hover:shadow-lg active:scale-95 transition-all font-semibold flex items-center gap-x-2">
-															<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-															</svg>
-															Grabar Registro
-													</button>
-											</div>
-									</form>
+										
+									</div>
 							</div>
 						</div>
 
-						<div class="flex gap-3 pt-4">
-								<button type="button" onclick="CerrarDivModales('Novedades')"
+						<div class="flex gap-3 pt-4" id="BotsNovedad">
+								<button type="button" onclick="CerrarDivModales('GuardarNovedades')"
 									class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-all active:scale-95">
 									Cerrar
 								</button>
+								<button  type="button" onClick="GrabarNovedad();"
+									class="bottonConfirmacion flex-1 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-400 hover:shadow-lg text-white font-semibold rounded-lg transition-all active:scale-95">
+										<span>Guardar Rotacion</span>
+								</button>
 							</div>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -1803,36 +1895,14 @@ function CerrarDivModales(nomModal) {
 														<!-- Encabezado del Área de Firma -->
 														<div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
 																<span class="text-[11px] font-black text-gray-400 uppercase tracking-widest">Panel de Firma Digital</span>
-																<div class="flex gap-2">
-																		<button type="button" onclick="deshacerFirma()" class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all" title="Deshacer">
-																				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-																				</svg>
-																		</button>
-																		<button type="button" id="BotLimpiarFirma" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all" title="Limpiar">
-																				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-																				</svg>
-																		</button>
-																</div>
-														</div>
-
-														<!-- Cuerpo del Canvas -->
-														<div class="signature-pad--body bg-gray-50/30 p-4" id="ContainerCanvasFirma">
-																<div class="relative border-2 border-dashed border-gray-200 rounded-xl bg-white w-full h-48 flex items-center justify-center overflow-hidden">
-																		<canvas class="absolute bg-gray-50" id="CanvasFirma" width="600" height="180"></canvas>
-																		<div class="pointer-events-none text-gray-300 text-xs font-medium uppercase tracking-widest italic">
-																				Firme aquí
-																		</div>
-																</div>
 														</div>
 
 														<!-- Inputs de Seguridad y Observaciones -->
 														<div class="p-6 space-y-5 border-t border-gray-100">
 																<div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-																		<!-- Clave de Firma -->
+																		<!-- Codigo de Seguridad -->
 																		<div class="md:col-span-4 flex flex-col gap-1.5 text-left">
-																				<label for="ClaveFirma" class="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Clave de Seguridad</label>
+																				<label for="ClaveFirma" class="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Codigo de Seguridad</label>
 																				<div class="relative">
 																						<input name="ClaveFirma" type="password" id="ClaveFirma" placeholder="••••••"
 																								class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none">
@@ -1847,9 +1917,6 @@ function CerrarDivModales(nomModal) {
 																		</div>
 																</div>
 														</div>
-
-												<script src="../librerias/firma/js/signature_pad.umd-jorge.js"></script>
-												<script src="../librerias/firma/js/app-jorge.js"></script>
 										</div>
 								</form>
 							</div>
@@ -1860,7 +1927,7 @@ function CerrarDivModales(nomModal) {
 									class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-all active:scale-95">
 									Cerrar
 								</button>
-								<button  type="button" id="BotAceptarModal" onclick="EnviarFirma();"
+								<button  type="button" onclick="EnviarFirma();"
 										class="flex-1 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-400 hover:shadow-lg text-white font-semibold rounded-lg transition-all active:scale-95">
 										<span>Firmar</span>
 									</button>
@@ -1971,7 +2038,7 @@ function CerrarDivModales(nomModal) {
 																					class="text-sm w-full px-3 py-2 bg-slate-50 text-slate-700 rounded-lg border border-slate-200 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
 																					<option value='' selected>— Turno —</option>
 																					<?php foreach($mTurno as $Var){?>
-																					<option value='<?php echo $Var;?>'><?php echo $Var;?></option>
+																						<option value='<?php echo $Var;?>'><?php echo $Var;?></option>
 																					<?php }?>
 																			</select>
 																	</div>
@@ -2057,7 +2124,31 @@ function CerrarDivModales(nomModal) {
 
 									 <!-- tabla de lista -->
 										<div class="tab mt-8">
-											<h3 class="font-semibold text-gray-700 text-lg" >Lista de chequeo - verificación de sede de acuerdo a puesto asumido</h3>
+											
+											<div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 shadow-sm">
+												<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+													<!-- Título con icono -->
+													<div class="flex items-center gap-3">
+														<div class="bg-blue-500 p-3 rounded-lg shadow-md">
+															<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#ffffff" viewBox="0 0 24 24">
+																<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+															</svg>
+														</div>
+														<div>
+															<h3 class="font-bold text-gray-800 text-lg">Lista de Chequeo</h3>
+															<p class="text-sm text-gray-500">Verificación de sede según puesto asumido</p>
+														</div>
+													</div>
+													<!-- Botón mejorado -->
+													<button onclick="MonstrarElementosVacios()" class="w-full md:w-auto cursor-pointer bg-gradient-to-br from-blue-700 to-blue-400 hover:from-blue-700 hover:to-blue-800 px-6 py-2.5 rounded-lg text-white font-semibold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-95 transition-all duration-200">
+														<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+															<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+														</svg>
+														<span>Todos Los Elementos</span>
+													</button>
+												</div>
+											</div>
+
 											<form method=post enctype="multipart/form-data" name='Frm1' id='Frm1'>
 												<input name="TipoGrabar" type="hidden" id="TipoGrabar">
                     		<input name="TipoModificar" type="hidden" id="TipoModificar">
@@ -2141,4 +2232,4 @@ function CerrarDivModales(nomModal) {
         </div>
 
       </div>
-   </div>
+  </div>
