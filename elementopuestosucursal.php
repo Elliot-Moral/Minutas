@@ -1,74 +1,148 @@
 <script type="text/javascript">
-function CambioSucursal(mSucursal){
-	mObIDPuestoSucursal=document.getElementById("IDPuestoSucursal");
-	if(!mObIDPuestoSucursal){
-		return
-	}
-	mObIDPuestoSucursal.classList.remove("hidden");
-	mValOld=mObIDPuestoSucursal.value;
-	mObIDPuestoSucursal.length=0;
-	mObIDPuestoSucursal.add(new Option('--Puesto--', '', true));
-	<?php
-	$Queri = "SELECT PuestoSucursal.IDPuestoSucursal, Puesto.Puesto, Sucursal.Sucursal, PuestoSucursal.ObsPuesto
-				FROM ".$PrefBD."solicitudes.vigilanciapuestosucursal PuestoSucursal
-				JOIN ".$PrefBD."solicitudes.vigilanciapuesto Puesto ON PuestoSucursal.IDPuesto=Puesto.IDPuesto
-				JOIN ".$PrefBD."novasoft.sucursal Sucursal ON PuestoSucursal.Sucursal=Sucursal.Sucursal
-				ORDER BY Puesto.Puesto";
-	$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
-	while($Row = $Result->fetch_assoc()){?>
-	if(mSucursal=='<?php echo $Row['Sucursal'];?>'){
-		mObIDPuestoSucursal.add(new Option('<?php echo $Row['Puesto'].' '.$Row['ObsPuesto'];?>', '<?php echo $Row['IDPuestoSucursal'];?>', (mValOld=='<?php echo $Row['IDPuestoSucursal'];?>' ? true : null)));
-	}
-	<?php
-	}//Ojo con los espacios (enter)
-	?>
-	FiltrarPuestoSucursalElemento();
-}
-function FiltrarPuestoSucursalElemento(){
-	const mSucursal=document.getElementById('Sucursal').value;
-	const mIDPuestoSucursal=document.getElementById('IDPuestoSucursal').value;
-	const mFiltroElemento=document.getElementById("FiltroElemento");
 
-	if(mIDPuestoSucursal !=''){
-		mFiltroElemento.classList.remove("hidden");
-	}
+/**
+ * 1. PERSISTENCIA CON LOCALSTORAGE
+ */
 
-	if(mSucursal && mIDPuestoSucursal){
-		$('#TBodyPuestoSucursalElemento').load("index.php?TipoModificar=<?php echo md5('Ajax1JorA5PuestoSucursalElemento'.date('d'));?>&Sucursal="+mSucursal+"&IDPuestoSucursal="+mIDPuestoSucursal,
-												function() {
-													MostrarSoloActivos(0);
-												});
-	}else{
-		document.getElementById('TBodyPuestoSucursalElemento').innerHTML = `
-    <tr>
-        <td colspan="100%" style="text-align: center; vertical-align: middle; padding: 20px; color: #6c757d;">
-            <i class="bi bi-info-circle"></i> No se encontraron registros
-        </td>
-    </tr>`;
-	}
+// Se ejecuta al cargar la página para restaurar el último filtro usado
+document.addEventListener("DOMContentLoaded", function() {
+    LeerLocalStorage();
+});
+
+function LeerLocalStorage() {
+    const filtroGuardado = localStorage.getItem("FiltroElementoPuestoSucursal");
+    if (!filtroGuardado) return;
+
+    try {
+        const obj = JSON.parse(filtroGuardado);
+        const comboSucursal = document.getElementById("Sucursal");
+        const comboPuesto = document.getElementById("IDPuestoSucursal");
+
+        if (obj.Sucursal && comboSucursal) {
+            // 1. Restaurar Sucursal
+            comboSucursal.value = obj.Sucursal;
+            
+            // 2. Cargar los puestos de esa sucursal (sin disparar el filtro aún)
+            CambioSucursal(obj.Sucursal, true);
+
+            // 3. Reintento de asignación del Puesto (espera a que el DOM renderice las opciones)
+            let intentos = 0;
+            const verificarPuesto = setInterval(() => {
+                if (comboPuesto) {
+                    comboPuesto.value = obj.IDPuestoSucursal;
+                    
+                    // Si el valor se asignó o superamos 1.5 segundos, filtramos y paramos
+                    if (comboPuesto.value === obj.IDPuestoSucursal || intentos > 15) {
+                        clearInterval(verificarPuesto);
+                        FiltrarPuestoSucursalElemento();
+                    }
+                }
+                intentos++;
+            }, 100);
+        }
+    } catch (e) {
+        console.error("Error al procesar LocalStorage:", e);
+    }
 }
 
-function FiltrarElemento(){
-	mSucursal=document.getElementById("Sucursal").value;
-	console.log(mSucursal);
-	if(!mSucursal){
-		document.getElementById('TBodyPuestoSucursalElemento').innerHTML = `
-    <tr>
-        <td colspan="100%" style="text-align: center; vertical-align: middle; padding: 20px; color: #6c757d;">
-            <i class="bi bi-info-circle"></i> No se encontraron registros
-        </td>
-    </tr>`;
-	}
+function GuardarLocalStorage(obj) {
+    if (obj && obj.Sucursal && obj.IDPuestoSucursal) {
+        localStorage.setItem("FiltroElementoPuestoSucursal", JSON.stringify(obj));
+    }
+}
 
-	const mFiltroElemento=document.getElementById("FiltroElemento").value.toLowerCase();
-	$("#TBodyPuestoSucursalElemento").find("tr").each(function(){
-		const mTextoElemento=$(this).find("td:eq(5)").text().toLowerCase();
-		if(mTextoElemento.includes(mFiltroElemento)){
-			$(this).show();
-		}else{
-			$(this).hide();
-		}
-	});
+function LimpiarLocalStorage() {
+    localStorage.removeItem("FiltroElementoPuestoSucursal");
+}
+
+
+/**
+ * 2. LÓGICA DE FILTRADO Y CARGA DINÁMICA
+ */
+
+function CambioSucursal(mSucursal, evitarFiltroAutomatico = false) {
+    const mObIDPuestoSucursal = document.getElementById("IDPuestoSucursal");
+    if (!mObIDPuestoSucursal) return;
+
+    mObIDPuestoSucursal.classList.remove("hidden");
+    
+    // Limpiar combo de puestos
+    mObIDPuestoSucursal.options.length = 0;
+    mObIDPuestoSucursal.add(new Option('-- Seleccione Puesto --', ''));
+
+    // Inyectar opciones desde PHP
+    <?php
+    $Queri = "SELECT PuestoSucursal.IDPuestoSucursal, Puesto.Puesto, Sucursal.Sucursal, PuestoSucursal.ObsPuesto
+              FROM ".$PrefBD."solicitudes.vigilanciapuestosucursal PuestoSucursal
+              JOIN ".$PrefBD."solicitudes.vigilanciapuesto Puesto ON PuestoSucursal.IDPuesto=Puesto.IDPuesto
+              JOIN ".$PrefBD."novasoft.sucursal Sucursal ON PuestoSucursal.Sucursal=Sucursal.Sucursal
+              ORDER BY Puesto.Puesto";
+    $Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
+    while($Row = $Result->fetch_assoc()){ ?>
+        if(mSucursal == '<?php echo $Row['Sucursal'];?>') {
+            let texto = '<?php echo addslashes($Row['Puesto']." ".$Row['ObsPuesto']); ?>';
+            let valor = '<?php echo $Row['IDPuestoSucursal']; ?>';
+            mObIDPuestoSucursal.add(new Option(texto, valor));
+        }
+    <?php } ?>
+
+    // Solo filtramos si no es una carga inicial desde LocalStorage
+    if (!evitarFiltroAutomatico) {
+        FiltrarPuestoSucursalElemento();
+    }
+}
+
+function FiltrarPuestoSucursalElemento() {
+    const mSucursal = document.getElementById('Sucursal').value;
+    const mIDPuestoSucursal = document.getElementById('IDPuestoSucursal').value;
+    const mFiltroElemento = document.getElementById("FiltroElemento");
+    const tBody = document.getElementById('TBodyPuestoSucursalElemento');
+
+    if (!tBody) return;
+
+    if (mSucursal && mIDPuestoSucursal) {
+        // Guardar estado actual
+        GuardarLocalStorage({
+            Sucursal: mSucursal,
+            IDPuestoSucursal: mIDPuestoSucursal
+        });
+
+        if (mFiltroElemento) mFiltroElemento.classList.remove("hidden");
+
+        // Carga de tabla vía AJAX
+        const url = "index.php?TipoModificar=<?php echo md5('Ajax1JorA5PuestoSucursalElemento'.date('d'));?>";
+        $(tBody).load(url + "&Sucursal=" + mSucursal + "&IDPuestoSucursal=" + mIDPuestoSucursal, 
+            function() {
+                if (typeof MostrarSoloActivos === "function") {
+                    MostrarSoloActivos(0);
+                }
+            }
+        );
+    } else {
+        // Estado vacío
+        tBody.innerHTML = `
+            <tr>
+                <td colspan="100%" class="text-center py-10 text-gray-400 italic">
+                    <i class="bi bi-info-circle"></i> Seleccione los filtros para cargar la minuta.
+                </td>
+            </tr>`;
+    }
+}
+
+/**
+ * 3. BUSCADOR EN TIEMPO REAL (Filtro sobre la tabla ya cargada)
+ */
+function FiltrarElemento() {
+    const input = document.getElementById("FiltroElemento");
+    if (!input) return;
+    
+    const mFiltro = input.value.toLowerCase();
+    
+    $("#TBodyPuestoSucursalElemento tr").each(function() {
+        // Asumiendo que el nombre del elemento está en la columna 6 (index 5)
+        const textoFila = $(this).find("td:eq(5)").text().toLowerCase();
+        $(this).toggle(textoFila.includes(mFiltro));
+    });
 }
 
 function MostrarSoloActivos(mCambiar){

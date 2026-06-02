@@ -51,8 +51,18 @@ $(document).ready(function(){
 	});
 });
 $(function(){//Para Fechas
-	$("#VigilanteEntrante,#VigilanteSaliente,#VigilanteAsume1").autocomplete({
+	$("#VigilanteEntrante,#VigilanteSaliente").autocomplete({
 		source: "index.php?TipoModificar=<?php echo md5('Ajax1JorA6ListadoVigilantes'.date('d'));?>",
+		minLength: 3,
+		autoFocus: true,
+		change: function (event, ui){
+										if(ui.item == null || ui.item == undefined){
+											$(this).val("");
+									  	}
+									}
+	});
+	$("#VigilanteAsume").autocomplete({
+		source: "index.php?TipoModificar=<?php echo md5('Ajax2JorA7ListadoNomina'.date('d'));?>",
 		minLength: 3,
 		autoFocus: true,
 		change: function (event, ui){
@@ -80,6 +90,8 @@ $(function(){//Para Fechas
     }
 	$.datepicker.setDefaults($.datepicker.regional['es']);
     $( "#FiltroFecha1,#FiltroFecha2, #FechaInicial, #FechaFinal").datepicker({ dateFormat: 'dd-mm-yy' });
+
+
 });
 function documentHeight(){//Obtener el alto de la página
     return Math.max(
@@ -195,6 +207,8 @@ function CrearMinuta(){
 					MostrarDivModales('Confirmacion');
 				}else{
 					EditarMinuta(0, true);
+					HbilitarMismoVigilante();
+					document.getElementById('CheckSameVigilante').disabled=false;
 				}
 			}
 		},
@@ -205,14 +219,19 @@ function CrearMinuta(){
 	});
 }
 function EditarMinuta(mIDMinuta, Editando = true) {
-	$('#Frm0,#Frm1,#Frm2').trigger("reset");
-	$('#Frm0,#Frm1,#Frm2').find("input[id='IDMinuta']").each(function() {
-		$(this).val(mIDMinuta);
+	['Frm0', 'Frm1', 'Frm2'].forEach(id => document.getElementById(id).reset());
+	['Frm0', 'Frm1', 'Frm2'].forEach(id => {
+		const input = document.getElementById(id).querySelector("input[id='IDMinuta']");
+		if(input) input.value = mIDMinuta;
 	});
 
-	$("#Frm0,#Frm1,#Frm2").find("input:text,select,textarea").each(function(){
-		this.classList.remove(...estilos.requeired);
+	['Frm0', 'Frm1', 'Frm2'].forEach(id => {
+		document.getElementById(id).querySelectorAll("input[type='text'],select,textarea").forEach(elem => {
+			elem.classList.remove(...estilos.requeired);
+		});
 	});
+
+
 	
 	if(mIDMinuta > 0) {
 		$('#Sucursal,#IDPuestoSucursal').attr('disabled', true);
@@ -237,7 +256,21 @@ function EditarMinuta(mIDMinuta, Editando = true) {
 					document.getElementById('Fecha').value = data.Fecha;
 					document.getElementById('HoraInicio').value = data.HoraInicio;
 					document.getElementById('VigilanteSaliente').value = data.NomVigilanteSaliente;
-					document.getElementById('VigilanteEntrante').value = data.NomVigilanteEntrante;
+
+					let checkbox=document.getElementById('CheckSameVigilante');
+					if(data.NomVigilanteSaliente == data.NomVigilanteEntrante){
+						checkbox.checked = true;
+						HbilitarMismoVigilante();
+					}else{
+						checkbox.checked = false;
+						HbilitarMismoVigilante();
+						document.getElementById('VigilanteEntrante').value = data.NomVigilanteEntrante;
+
+					}
+
+					document.getElementById('CheckAceptoTerminar').checked = true;
+
+					document.getElementById('ObsInfraestructura').value = data.ObsInfraestructura;
 					document.getElementById('RealizaRequisa').value = data.RealizaRequisa;
 					document.getElementById('ObsRequisa').value = data.ObsRequisa;
 					document.getElementById('HoraFinalizaRecorrido').value = data.HoraFinalizaRecorrido;
@@ -250,6 +283,8 @@ function EditarMinuta(mIDMinuta, Editando = true) {
 						$('#DivMostrarMinuta').find(".tab").hide();
 						$('#DivMostrarMinuta').find("select,:checkbox").attr("disabled", false);
 						$('#DivMostrarMinuta').find("input:text,textarea").attr("readonly", false);
+						document.getElementById('CheckAceptoTerminar').checked = false;
+
 						
 						$("select,input,textarea").change(function() {
 							document.getElementById('HuboCambio').value = 1;
@@ -285,11 +320,14 @@ function EditarMinuta(mIDMinuta, Editando = true) {
 		});
 	} else {
 		// Minuta nueva - solo mostrar primer tab
-		$('#Sucursal,#IDPuestoSucursal,#VigilanteEntrante,#VigilanteSaliente,#Turno').attr('disabled', false);
-		$('#Sucursal,#IDPuestoSucursal,#VigilanteEntrante,#VigilanteSaliente,#Turno').attr('readonly', false);
+
+		$('#Sucursal,#IDPuestoSucursal,#VigilanteEntrante,#VigilanteSaliente,#Turno, #ObsInfraestructura').attr('disabled', false);
+		$('#Sucursal,#IDPuestoSucursal,#VigilanteEntrante,#VigilanteSaliente,#Turno, #ObsInfraestructura').attr('readonly', false);
 
 		document.getElementById('Fecha').value = '<?php echo date('d-m-Y');?>';
 		document.getElementById('HoraInicio').value = '<?php echo date('H:i');?>';
+
+		document.getElementById('CheckAceptoTerminar').checked = false;
 		
 		$("select,input,textarea").change(function() {
 			document.getElementById('HuboCambio').value = 1;
@@ -312,7 +350,6 @@ function InhabilitarInput(){
 	setTimeout(() => {
 		const cuerpoTabla = document.getElementById("TBodyListaChequeo");
 		const inputs = cuerpoTabla.querySelectorAll("input, select, textarea");
-		console.log(inputs);
 		inputs.forEach(input => {
 				input.disabled = true;
 		});
@@ -339,7 +376,6 @@ function showTab(n) {
 }
 
 function nextPrev(n) {
-	console.log(`n: ${n}`);
 	var x = document.getElementsByClassName("tab");
 	
 	if(n == 1 && !validateForm()) return false;
@@ -368,8 +404,16 @@ function validateForm(){
 		ele=document.getElementById('Turno');if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
 		ele=document.getElementById('Fecha');if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
 		ele=document.getElementById('HoraInicio');if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
+		
+		let checkbox=document.getElementById('CheckSameVigilante');
 		ele=document.getElementById('VigilanteSaliente');if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
-		ele=document.getElementById('VigilanteEntrante');if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
+		
+		if(checkbox.checked){
+			ele=document.getElementById('VigilanteEntrante').value=document.getElementById('VigilanteSaliente').value;
+		}else{
+			ele=document.getElementById('VigilanteEntrante');if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
+		}
+
 		if(mRetorno && document.getElementById('HuboCambio').value==1){//Grabo los datos
 			Frm=document.getElementById('Frm0');
 			Frm.TipoGrabar.value='<?php echo md5('JorA6Tipo0'.date('d'));?>';
@@ -429,6 +473,7 @@ function validateForm(){
 		//Los datos no se graban acá, para este form se graban campo a campo, por cambio
 	}else if(currentTab==2){	//2	REQUISA A VIGILANTE SALIENTE  - Finalizar Crear Minuta por Puesto y Turno
 		ele=document.getElementById('RealizaRequisa');if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
+		ele=document.getElementById('ObsInfraestructura');if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
 		ele=document.getElementById('HoraFinalizaRecorrido');if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
 		ele=document.getElementById('ObsRequisa');if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
 		ele=document.getElementById('CheckAceptoTerminar');
@@ -529,8 +574,6 @@ function CambioPuestoSucursalElemento(){
 	mIDPuestoSucursal=document.getElementById('IDPuestoSucursal').value;
 	mIDMinuta =document.getElementById('Frm0').IDMinuta.value;
 
-	console.log(`mSucursal: ${mSucursal}, mIDPuestoSucursal: ${mIDPuestoSucursal}, mIDMinuta: ${mIDMinuta}`);			
-	
 	/* Aquí se actualiza el form con los elementos para este puesto*/
 	if(mSucursal && mIDPuestoSucursal){
 		$('#TBodyListaChequeo').load("index.php?TipoModificar=<?php echo md5('Ajax2JorA6ElementosEditarMinuta'.date('d'));?>&Sucursal="+
@@ -816,8 +859,8 @@ function GrabarNovedad(){
 	mRetorno=true;
 	ele=document.getElementById('FrmNovedad').HoraNovedad;if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
 	ele=document.getElementById('FrmNovedad').DescripcionNovedad;if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
-	ele=document.getElementById('FrmNovedad').ComunicadorNovedad;if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
-	ele=document.getElementById('FrmNovedad').CargoComunicador;if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
+	// ele=document.getElementById('FrmNovedad').ComunicadorNovedad;if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
+	// ele=document.getElementById('FrmNovedad').CargoComunicador;if(ele.value){ele.classList.remove(...estilos.requeired);}else{ele.classList.add(...estilos.requeired);mRetorno=false;}
 	if(mRetorno){
 		Frm=document.getElementById('FrmNovedad');
 		Frm.TipoGrabar.value='<?php echo md5('JorA6GrabarNovedad'.date('d'));?>';
@@ -999,6 +1042,7 @@ function EnviarFirma(){
 			cache: false,
 			data: myData
 		}).done(function(html){
+			console.log(html);
 			if(html==''){
 				Swal.fire({
 						title: '¡Registro Exitoso!',
@@ -1053,6 +1097,29 @@ function CerrarDivModales(nomModal) {
       tl.to(container, { scale: 0.8, opacity: 0, y: -50, duration: 0.3, ease: 'back.in(1.7)' })
         .to(backdrop, { opacity: 0, duration: 0.2 }, '-=0.1');
 }
+
+
+function HbilitarMismoVigilante(elemento){
+	let checkbox=document.getElementById('CheckSameVigilante');
+	let DivVigilanteSaliente=document.getElementById('DivVigilanteSaliente');
+	let DivVigilanteEntrante=document.getElementById('DivVigilanteEntrante');
+	let parrafo1 = document.getElementById('ParrafoVigilanteSaliente');
+	let parrafo2 = document.getElementById('ParrafoEntregaPuesto');
+	let inputVigilanteEntrante = document.getElementById('VigilanteEntrante');
+	if(checkbox.checked){
+		gsap.to(DivVigilanteEntrante, { opacity: 0, height: 0, duration: 0.3, ease: 'power2.in', onComplete: () => {
+			DivVigilanteEntrante.classList.add('hidden');
+		}});
+		parrafo1.innerText="Vigilante Entrante y saliente";
+		parrafo2.innerText="Entrega el puesto a sí mismo";
+	}else{
+		DivVigilanteEntrante.classList.remove('hidden');
+		gsap.fromTo(DivVigilanteEntrante, { opacity: 0, height: 0 }, { opacity: 1, height: 'auto', duration: 0.5, ease: 'back.out(1.5)', overwrite: false });
+		parrafo1.innerText="Vigilante saliente";
+		parrafo2.innerText="Entrega el puesto";
+		inputVigilanteEntrante.value="";
+	}
+}
 </script>
 
 <section class="h-screen col-span-9 md:col-span-8 bg-gray-50 p-4 lg:p-8 S max-h-screen"><?php
@@ -1095,8 +1162,18 @@ function CerrarDivModales(nomModal) {
 				LEFT JOIN ".$PrefBD."solicitudes.vigilanciapuestosucursal PuestoSucursal ON Minuta.IDPuestoSucursal=PuestoSucursal.IDPuestoSucursal
 				LEFT JOIN ".$PrefBD."solicitudes.vigilanciapuesto Puesto ON PuestoSucursal.IDPuesto=Puesto.IDPuesto
 				WHERE Minuta.IDMinuta ".$Filtrico."
-				ORDER BY Minuta.Fecha DESC";
+				ORDER BY Minuta.Fecha DESC, Minuta.IDMinuta DESC";
 	$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
+
+	$MismoVigilante=false;
+	if($Result->num_rows>0){
+		while($row = $Result->fetch_assoc()){
+			if($row['VigilanteEntrante']==$row['VigilanteSaliente']){
+				$MismoVigilante=true;
+			}
+		}
+	}
+
 	// echo '<pre style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; font-family: monospace; font-size: 12px;">'.htmlspecialchars($Queri).'</pre>';
 	?>
 
@@ -1235,6 +1312,7 @@ function CerrarDivModales(nomModal) {
 		<table class="table table-striped table-bordered">
 			<thead class="bg-gray-100  rounded-t-lg shadow-xs sticky top-0 z-10">
 					<TR>
+						<!-- <TH width="1%" class="p-3 text-left text-sm font-bold text-gray-700 tracking-wider text-center">ID</TH> -->
 						<TH width="8%" class="p-3 text-left text-sm font-bold text-gray-700 tracking-wider text-center">Fecha</TH>
 						<TH width="16%" class="p-3 text-left text-sm font-bold text-gray-700 tracking-wider text-center">Sede</TH>
 						<TH width="17%" class="p-3 text-left text-sm font-bold text-gray-700 tracking-wider text-center">Puesto</TH>
@@ -1252,6 +1330,12 @@ function CerrarDivModales(nomModal) {
 					?>
 			<tbody>
 				<TR class="bg-white border-t border-gray-200" align=center>
+					<!-- ID -->
+					<!-- <TD class="p-2" align="center">
+						<div class="inline-flex items-center justify-center px-3 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-full group hover:from-blue-100 hover:to-indigo-100 transition-all duration-200 shadow-sm">
+							<span class="text-[11px] font-bold text-blue-700 tracking-tight font-mono"><?php echo $Row['IDMinuta'];?></span>
+						</div>
+					</TD> -->
 					<!-- fecha -->
 					<TD class="p-2">
 						<div class="inline-flex items-center gap-3 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg group hover:bg-white transition-colors">
@@ -1269,62 +1353,97 @@ function CerrarDivModales(nomModal) {
 					<TD class="p-2"><?php echo $Row['Puesto'];?></TD>
 					<!-- vigilante entrante -->
 					<TD class="p-2">
-						<div class="bg-white p-2 rounded-lg text-center shadow-sm border border-gray-100">
-							<div class="text-[12px] flex justify-between gap-2">
-								<?php
-								echo $Row['NomVigilanteEntrante'];
-								if($Row['HoraFinalizaRecorrido']>0){
-									if($Row['FFirmaEntrante']>0){?>
-										<span class="cursor-pointer group" title="<?php echo DarFechaHora($Row['FFirmaEntrante'],3).' '.$Row['ObsFirmaEntrante'];?>">
-											<svg xmlns="http://www.w3.org/2000/svg" 
-													width="16" 
-													height="16" 
-													viewBox="0 0 24 24" 
-													class="text-green-300 hover:text-green-500 transition-colors duration-200 fill-current">
-													<path d="M13.29 7.29 7 13.58l-2.29-2.29L3.3 12.7l3 3c.2.2.45.29.71.29s.51-.1.71-.29l7-7-1.41-1.41Zm-.29 6.3-.79-.79-1.41 1.41 1.5 1.5c.2.2.45.29.71.29s.51-.1.71-.29l7-7-1.41-1.41-6.29 6.29Z"></path>
-											</svg>
-										</span><?php
-									}else{?>
-										<span onClick="FirmarMinuta(<?php echo $Row['IDMinuta'];?>,'Entrante')" class="cursor-pointer group" title="Firmar Minuta">
-											<svg xmlns="http://www.w3.org/2000/svg" 
-													width="16" 
-													height="16" 
-													viewBox="0 0 24 24" 
-													class="text-blue-300 hover:text-blue-500 transition-colors duration-200 fill-current">
-													<path d="M17 17.76v-5.35l2.91-2.91L21 8.41c.38-.38.58-.88.58-1.42s-.21-1.04-.59-1.41L18.4 3c-.38-.38-.88-.58-1.41-.58s-1.04.21-1.41.59L13.8 4.8l-2.21 2.21H6.24l-3.35 12.3 1.82 1.82 12.3-3.35Zm0-13.35 2.59 2.58-1.09 1.09-2.59-2.59 1.08-1.08ZM7.77 9h4.65l2.09-2.09L17.1 9.5l-2.09 2.09v4.65L7 18.42l3.43-3.43h.08c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5-1.5.67-1.5 1.5v.08L5.58 17l2.18-8.01Z"></path>
-											</svg>
-									</span><?php
-									}
-								}?>
-							</div>
-							<hr>
-							<div class="text-[12px] flex justify-between gap-2">
-								<?php 
-									echo $Row['NomVigilanteSaliente'];
+						<?php 
+						$esMismoVigilante = ($Row['VigilanteEntrante'] == $Row['VigilanteSaliente']);
+						?>
+						<div class="bg-white p-2 rounded-lg text-center shadow-sm border border-gray-100" >
+							<?php if($esMismoVigilante){ ?>
+								<!-- Mismo vigilante: mostrar solo Entrante -->
+								<div class="text-[12px] flex justify-between gap-2" title="Vigilante Entrante y Saliente">
+									<?php
+									echo $Row['NomVigilanteEntrante'];
 									if($Row['HoraFinalizaRecorrido']>0){
-										if($Row['FFirmaSaliente']>0){?>
-											<span class="cursor-pointer group" title="<?php echo DarFechaHora($Row['FFirmaSaliente'],3).' '.$Row['ObsFirmaSaliente'];?>">
+										if($Row['FFirmaEntrante']>0){?>
+											<span class="cursor-pointer group" title="<?php echo DarFechaHora($Row['FFirmaEntrante'],3).' '.$Row['ObsFirmaEntrante'];?>">
 												<svg xmlns="http://www.w3.org/2000/svg" 
 														width="16" 
 														height="16" 
 														viewBox="0 0 24 24" 
 														class="text-green-300 hover:text-green-500 transition-colors duration-200 fill-current">
-													<path d="M13.29 7.29 7 13.58l-2.29-2.29L3.3 12.7l3 3c.2.2.45.29.71.29s.51-.1.71-.29l7-7-1.41-1.41Zm-.29 6.3-.79-.79-1.41 1.41 1.5 1.5c.2.2.45.29.71.29s.51-.1.71-.29l7-7-1.41-1.41-6.29 6.29Z"></path>
-												</svg>
-											</span><?php
+														<path d="M13.29 7.29 7 13.58l-2.29-2.29L3.3 12.7l3 3c.2.2.45.29.71.29s.51-.1.71-.29l7-7-1.41-1.41Zm-.29 6.3-.79-.79-1.41 1.41 1.5 1.5c.2.2.45.29.71.29s.51-.1.71-.29l7-7-1.41-1.41-6.29 6.29Z"></path>
+											</svg>
+										</span><?php
 										}else{?>
-											<span onClick="FirmarMinuta(<?php echo $Row['IDMinuta'];?>,'Saliente')" class="cursor-pointer group" title="Firmar Minuta">
+											<span onClick="FirmarMinuta(<?php echo $Row['IDMinuta'];?>,'Ambos')" class="cursor-pointer group" title="Firmar Minuta">
 												<svg xmlns="http://www.w3.org/2000/svg" 
 														width="16" 
 														height="16" 
 														viewBox="0 0 24 24" 
 														class="text-blue-300 hover:text-blue-500 transition-colors duration-200 fill-current">
 														<path d="M17 17.76v-5.35l2.91-2.91L21 8.41c.38-.38.58-.88.58-1.42s-.21-1.04-.59-1.41L18.4 3c-.38-.38-.88-.58-1.41-.58s-1.04.21-1.41.59L13.8 4.8l-2.21 2.21H6.24l-3.35 12.3 1.82 1.82 12.3-3.35Zm0-13.35 2.59 2.58-1.09 1.09-2.59-2.59 1.08-1.08ZM7.77 9h4.65l2.09-2.09L17.1 9.5l-2.09 2.09v4.65L7 18.42l3.43-3.43h.08c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5-1.5.67-1.5 1.5v.08L5.58 17l2.18-8.01Z"></path>
-												</svg>
-											</span><?php
+													</svg>
+										</span><?php
 										}
-								}?>
-							</div>
+									}?>
+								</div>
+							<?php } else { ?>
+								<!-- Vigilantes diferentes: mostrar ambos -->
+								<div class="text-[12px] flex justify-between gap-2" title="Vigilante Entrante">
+									<?php
+									echo $Row['NomVigilanteEntrante'];
+									if($Row['HoraFinalizaRecorrido']>0){
+										if($Row['FFirmaEntrante']>0){?>
+											<span class="cursor-pointer group" title="<?php echo DarFechaHora($Row['FFirmaEntrante'],3).' '.$Row['ObsFirmaEntrante'];?>">
+												<svg xmlns="http://www.w3.org/2000/svg" 
+														width="16" 
+														height="16" 
+														viewBox="0 0 24 24" 
+														class="text-green-300 hover:text-green-500 transition-colors duration-200 fill-current">
+														<path d="M13.29 7.29 7 13.58l-2.29-2.29L3.3 12.7l3 3c.2.2.45.29.71.29s.51-.1.71-.29l7-7-1.41-1.41Zm-.29 6.3-.79-.79-1.41 1.41 1.5 1.5c.2.2.45.29.71.29s.51-.1.71-.29l7-7-1.41-1.41-6.29 6.29Z"></path>
+											</svg>
+										</span><?php
+										}else{?>
+											<span onClick="FirmarMinuta(<?php echo $Row['IDMinuta'];?>,'Entrante')" class="cursor-pointer group" title="Firmar Minuta">
+												<svg xmlns="http://www.w3.org/2000/svg" 
+														width="16" 
+														height="16" 
+														viewBox="0 0 24 24" 
+														class="text-blue-300 hover:text-blue-500 transition-colors duration-200 fill-current">
+														<path d="M17 17.76v-5.35l2.91-2.91L21 8.41c.38-.38.58-.88.58-1.42s-.21-1.04-.59-1.41L18.4 3c-.38-.38-.88-.58-1.41-.58s-1.04.21-1.41.59L13.8 4.8l-2.21 2.21H6.24l-3.35 12.3 1.82 1.82 12.3-3.35Zm0-13.35 2.59 2.58-1.09 1.09-2.59-2.59 1.08-1.08ZM7.77 9h4.65l2.09-2.09L17.1 9.5l-2.09 2.09v4.65L7 18.42l3.43-3.43h.08c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5-1.5.67-1.5 1.5v.08L5.58 17l2.18-8.01Z"></path>
+													</svg>
+										</span><?php
+										}
+									}?>
+								</div>
+								<hr>
+								<div class="text-[12px] flex justify-between gap-2" title="Vigilante Saliente">
+									<?php 
+										echo $Row['NomVigilanteSaliente'];
+										if($Row['HoraFinalizaRecorrido']>0){
+											if($Row['FFirmaSaliente']>0){?>
+												<span class="cursor-pointer group" title="<?php echo DarFechaHora($Row['FFirmaSaliente'],3).' '.$Row['ObsFirmaSaliente'];?>" >
+													<svg xmlns="http://www.w3.org/2000/svg" 
+															width="16" 
+															height="16" 
+															viewBox="0 0 24 24" 
+															class="text-green-300 hover:text-green-500 transition-colors duration-200 fill-current">
+														<path d="M13.29 7.29 7 13.58l-2.29-2.29L3.3 12.7l3 3c.2.2.45.29.71.29s.51-.1.71-.29l7-7-1.41-1.41Zm-.29 6.3-.79-.79-1.41 1.41 1.5 1.5c.2.2.45.29.71.29s.51-.1.71-.29l7-7-1.41-1.41-6.29 6.29Z"></path>
+													</svg>
+												</span><?php
+											}else{?>
+												<span onClick="FirmarMinuta(<?php echo $Row['IDMinuta'];?>,'Saliente')" class="cursor-pointer group" title="Firmar Minuta">
+													<svg xmlns="http://www.w3.org/2000/svg" 
+															width="16" 
+															height="16" 
+															viewBox="0 0 24 24" 
+															class="text-blue-300 hover:text-blue-500 transition-colors duration-200 fill-current">
+														<path d="M17 17.76v-5.35l2.91-2.91L21 8.41c.38-.38.58-.88.58-1.42s-.21-1.04-.59-1.41L18.4 3c-.38-.38-.88-.58-1.41-.58s-1.04.21-1.41.59L13.8 4.8l-2.21 2.21H6.24l-3.35 12.3 1.82 1.82 12.3-3.35Zm0-13.35 2.59 2.58-1.09 1.09-2.59-2.59 1.08-1.08ZM7.77 9h4.65l2.09-2.09L17.1 9.5l-2.09 2.09v4.65L7 18.42l3.43-3.43h.08c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5-1.5.67-1.5 1.5v.08L5.58 17l2.18-8.01Z"></path>
+													</svg>
+												</span><?php
+											}
+										}?>
+								</div>
+							<?php } ?>
 						</div>
 					</TD>
 			
@@ -1553,13 +1672,13 @@ function CerrarDivModales(nomModal) {
 													<div class="md:col-span-2 flex flex-col gap-1.5">
 															<label for="HoraInicioReceso" class="text-[11px] font-black text-gray-500 uppercase tracking-wider ml-1">Hora Inicio</label>
 															<input name="HoraInicioReceso" type="text" id="HoraInicioReceso" maxlength="5" onBlur="ValidarHora(this);" autocomplete="off" placeholder="00:00"
-																	class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
+																	class="text-sm block w-full px-4 py-2 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
 													</div>
 
 													<!-- Actividad Autorizada -->
 													<div class="md:col-span-4 flex flex-col gap-1.5">
 															<label for="IDReceso" class="text-[11px] font-black text-gray-500 uppercase tracking-wider ml-1">Actividad Autorizada</label>
-															<select name="IDReceso" id="IDReceso" class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none appearance-none cursor-pointer">
+															<select name="IDReceso" id="IDReceso" class="text-sm block w-full px-4 py-2 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none appearance-none cursor-pointer">
 																	<option value='' selected>Seleccione actividad...</option>
 																	<?php
 																	$QueriR = "SELECT DISTINCT Receso.IDReceso, Receso.Receso 
@@ -1576,21 +1695,21 @@ function CerrarDivModales(nomModal) {
 													<div class="md:col-span-4 flex flex-col gap-1.5">
 															<label for="VigilanteAsume" class="text-[11px] font-black text-gray-500 uppercase tracking-wider ml-1">Vigilante / Persona Autorizada</label>
 															<input name="VigilanteAsume" type="text" id="VigilanteAsume" autocomplete="off" placeholder="Nombre de quien asume"
-																	class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
+																	class="text-sm block w-full px-4 py-2 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
 													</div>
 
 													<!-- Hora Fin -->
 													<div class="md:col-span-2 flex flex-col gap-1.5">
 															<label for="HoraFinReceso" class="text-[11px] font-black text-gray-500 uppercase tracking-wider ml-1">Hora Fin</label>
 															<input name="HoraFinReceso" type="text" id="HoraFinReceso" maxlength="5" onBlur="ValidarHora(this);" autocomplete="off" placeholder="00:00"
-																	class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
+																	class="text-sm block w-full px-4 py-2 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
 													</div>
 
 													<!-- Observación (Ancho completo o mayor) -->
 													<div class="md:col-span-12 flex flex-col gap-1.5">
 															<label for="ObsReceso" class="text-[11px] font-black text-gray-500 uppercase tracking-wider ml-1">Observación del Receso</label>
 															<input name="ObsReceso" type="text" id="ObsReceso" maxlength="200" placeholder="Escriba detalles o motivos aquí..."
-																	class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
+																	class="text-sm block w-full px-4 py-2 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
 													</div>
 											</div>
 									</div>
@@ -1603,7 +1722,7 @@ function CerrarDivModales(nomModal) {
 									Cerrar
 								</button>
 								<button  type="button" onClick="GrabarReceso();"
-									class="bottonConfirmacion flex-1 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-400 hover:shadow-lg text-white font-semibold rounded-lg transition-all active:scale-95">
+									class="flex-1 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-400 hover:shadow-lg text-white font-semibold rounded-lg transition-all active:scale-95">
 										<span>Guardar Rotacion</span>
 								</button>
 							</div>
@@ -1626,8 +1745,8 @@ function CerrarDivModales(nomModal) {
 												</svg>
                     </div>
                     <div>
-                        <h3 id="modal-Novedades-title" class="text-xl">Novedades durante el turno</h3>
-                        <p class="text-blue-100 text-sm">Registro de novedades comunicadas verbalmente o fuera del alcance de los registros</p>
+                        <h3 id="modal-Novedades-title" class="text-xl">Sucesos durante el turno</h3>
+                        <p class="text-blue-100 text-sm">Registro de sucesos comunicados verbalmente o fuera del alcance de los registros</p>
                     </div>
                 </div>
 
@@ -1684,8 +1803,8 @@ function CerrarDivModales(nomModal) {
 												</svg>
                     </div>
                     <div>
-                        <h3 id="modal-GuardarNovedades-title" class="text-xl">Guardar Novedades</h3>
-                        <p class="text-blue-100 text-sm">Registra las novedades correspondientes al turno actual.</p>
+                        <h3 id="modal-GuardarNovedades-title" class="text-xl">Guardar Suceso</h3>
+                        <p class="text-blue-100 text-sm">Registra los sucesos u hechos correspondientes al turno actual.</p>
                     </div>
                 </div>
 
@@ -1716,28 +1835,28 @@ function CerrarDivModales(nomModal) {
 													<div class="md:col-span-3 flex flex-col gap-1.5">
 															<label for="HoraNovedad" class="text-[11px] font-black text-gray-500 uppercase tracking-wider ml-1">Hora</label>
 															<input name="HoraNovedad" type="text" id="HoraNovedad" maxlength="5" onBlur="ValidarHora(this);" autocomplete="off" placeholder="00:00"
-																	class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
+																	class="text-sm block w-full px-4 py-2 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
 													</div>
 
 													<!-- Comunicador -->
-													<div class="md:col-span-5 flex flex-col gap-1.5">
+													<!-- <div class="md:col-span-5 flex flex-col gap-1.5">
 															<label for="ComunicadorNovedad" class="text-[11px] font-black text-gray-500 uppercase tracking-wider ml-1">Comunicador Novedad</label>
 															<input name="ComunicadorNovedad" type="text" maxlength="60" autocomplete="off" placeholder="Comunicador Novedad"
-																	class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
-													</div>
+																	class="text-sm block w-full px-4 py-2 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
+													</div> -->
 
 													<!-- Cargo Comunicador -->
-													<div class="md:col-span-4 flex flex-col gap-1.5">
+													<!-- <div class="md:col-span-4 flex flex-col gap-1.5">
 															<label for="CargoComunicador" class="text-[11px] font-black text-gray-500 uppercase tracking-wider ml-1">Cargo Comunicador</label>
 															<input name="CargoComunicador" type="text" id="CargoComunicador" maxlength="50" autocomplete="off" placeholder="Cargo Comunicador"
-																	class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
-													</div>
+																	class="text-sm block w-full px-4 py-2 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
+													</div> -->
 
 													<!-- Observación (Ancho completo o mayor) -->
-													<div class="md:col-span-12 flex flex-col gap-1.5">
+													<div class="md:col-span-9 flex flex-col gap-1.5">
 															<label for="DescripcionNovedad" class="text-[11px] font-black text-gray-500 uppercase tracking-wider ml-1">Descripción Novedad</label>
 															<input name="DescripcionNovedad" type="text" id="DescripcionNovedad" maxlength="200" autocomplete="off" placeholder="Descripción Novedad"
-																	class="text-sm block w-full px-4 py-1 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
+																	class="text-sm block w-full px-4 py-2 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
 													</div>
 											</div>
 										
@@ -1751,8 +1870,8 @@ function CerrarDivModales(nomModal) {
 									Cerrar
 								</button>
 								<button  type="button" onClick="GrabarNovedad();"
-									class="bottonConfirmacion flex-1 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-400 hover:shadow-lg text-white font-semibold rounded-lg transition-all active:scale-95">
-										<span>Guardar Rotacion</span>
+									class="flex-1 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-400 hover:shadow-lg text-white font-semibold rounded-lg transition-all active:scale-95">
+										<span>Guardar Suceso</span>
 								</button>
 							</div>
         </form>
@@ -2062,8 +2181,25 @@ function CerrarDivModales(nomModal) {
 															<!-- Columna derecha: Vigilantes + Hora -->
 															<div class="col-span-4 flex flex-col gap-4">
 
+																 	<!-- Toggle para un mismo vigilante -->
+																	<div class="flex items-center gap-x-3 p-3 rounded-lg border border-emerald-200 bg-white">
+																			<div class="flex items-center gap-3">
+																					<label class="relative inline-flex items-center cursor-pointer" id="LblSameVigilante" for="CheckSameVigilante">
+																							<!-- Input oculto pero funcional -->
+																							<input type="checkbox" id="CheckSameVigilante" onclick="HbilitarMismoVigilante(this)" name="CheckSameVigilante" class="sr-only peer">
+																							<!-- El Riel del Toggle -->
+																							<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+																							<!-- Texto del Label -->
+																					</label>
+																			</div>
+																			<div>
+																					<p class="font-medium text-sm text-slate-700">Habilitar un mismo vigilante quien recibe y entrega el puesto</p>
+																					<p class="text-[12px] text-gray-400">Al activar esta opción, el mismo vigilante será asignado en ambas posiciones.</p>
+																			</div>
+																	</div>
+
 																	<!-- Vigilante Saliente -->
-																	<div class="bg-white rounded-xl border border-slate-200 border-l-[3px] border-l-[#10b981] p-4">
+																	<div class="bg-white rounded-xl border border-slate-200 border-l-[3px] border-l-[#10b981] p-4" id="DivVigilanteSaliente">
 																			<div class="flex items-center gap-2 mb-3">
 																					<div class="w-8 h-8 bg-[#d1fae5] rounded-full flex items-center justify-center flex-shrink-0">
 																							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#047857" viewBox="0 0 24 24">
@@ -2071,8 +2207,8 @@ function CerrarDivModales(nomModal) {
 																							</svg>
 																					</div>
 																					<div>
-																							<p class="text-xs font-600 text-[#047857] uppercase tracking-wide leading-none mb-0.5">Vigilante saliente</p>
-																							<p class="text-xs text-[#6ee7b7] leading-none">Entrega el puesto</p>
+																							<p class="text-xs font-600 text-[#047857] uppercase tracking-wide leading-none mb-0.5" id="ParrafoVigilanteSaliente">Vigilante saliente</p>
+																							<p class="text-xs text-[#6ee7b7] leading-none" id="ParrafoEntregaPuesto">Entrega el puesto</p>
 																					</div>
 																			</div>
 																			<input name="VigilanteSaliente" type="text" id="VigilanteSaliente"
@@ -2081,7 +2217,7 @@ function CerrarDivModales(nomModal) {
 																	</div>
 
 																	<!-- Vigilante Entrante -->
-																	<div class="bg-white rounded-xl border border-slate-200 border-l-[3px] border-l-[#f59e0b] p-4">
+																	<div class="bg-white rounded-xl border border-slate-200 border-l-[3px] border-l-[#f59e0b] p-4" id="DivVigilanteEntrante">
 																			<div class="flex items-center gap-2 mb-3">
 																					<div class="w-8 h-8 bg-[#fef3c7] rounded-full flex items-center justify-content flex-shrink-0 flex items-center justify-center">
 																							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#92400e" viewBox="0 0 24 24">
@@ -2171,49 +2307,73 @@ function CerrarDivModales(nomModal) {
 											</form>
 										</div>
 
-										<!-- Requisa a vigilante saliente -->
-										 <div class="tab shadow-md rounded-lg p-4 bg-white mt-6 border border-gray-200">
-												<h3 class="text-blue-800 font-semibold">Requisa a Vigilante Saliente</h3>
-                				<form method=post enctype="multipart/form-data" name='Frm2' id='Frm2'>
-													<input name="TipoGrabar" type="hidden" id="TipoGrabar">
-													<input name="TipoModificar" type="hidden" id="TipoModificar">
-													<input name="IDMinuta" type="hidden" id="IDMinuta">
-													<div class="grid grid-cols-1 md:grid-cols-10 gap-4 mt-4">
-														<div class="col-span-3">
-															<label for="RealizaRequisa">Requisa realizada?</label>
-															<select name="RealizaRequisa" id="RealizaRequisa" class="block w-full max-w-96 ps-3 pe-3 py-1 text-gray-500 rounded-lg border border-default-medium text-heading text-sm shadow-xs placeholder:text-body outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all" >
-																<option value= 1>Si</option>
-																<option value= -1>No</option>
+										<!-- Requisa a vigilante saliente e infraestructura -->
+										<div class="tab shadow-md rounded-lg p-6 bg-white mt-6 border border-gray-200 space-y-8">
+											<form method="post" enctype="multipart/form-data" name="Frm2" id="Frm2">
+												<input name="TipoGrabar" type="hidden" id="TipoGrabar">
+												<input name="TipoModificar" type="hidden" id="TipoModificar">
+												<input name="IDMinuta" type="hidden" id="IDMinuta">
+
+												<!-- Observaciones a infraestructura -->
+												<div class="space-y-3">
+													<h3 class="text-lg font-semibold text-blue-800 flex items-center gap-2">
+														<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.5 1.5H3.75A2.25 2.25 0 001.5 3.75v12.5A2.25 2.25 0 003.75 18.5h12.5a2.25 2.25 0 002.25-2.25V9.5M6.5 6.5h7M6.5 10h7M6.5 13.5h3"/></svg>
+														Observaciones a Infraestructura
+													</h3>
+													<div class="col-span-10">
+														<label for="ObsInfraestructura" class="block text-sm font-medium text-gray-700 mb-2">Relacione cualquier novedad con respecto a la infraestructura.</label>
+														<textarea name="ObsInfraestructura" id="ObsInfraestructura" rows="3" class="block w-full px-3 py-2 text-gray-700 rounded-lg border border-gray-300 shadow-sm placeholder:text-gray-400 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all" placeholder="Describa las observaciones de infraestructura..." maxlength="250"></textarea>
+													</div>
+												</div>
+
+												<!-- Requisa a vigilante saliente -->
+												<div class="space-y-4 pt-6 border-t border-gray-200">
+													<h3 class="text-lg font-semibold text-blue-800 flex items-center gap-2">
+														<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
+														Requisa a Vigilante Saliente
+													</h3>
+
+													<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-10 gap-4">
+														<!-- Requisa realizada -->
+														<div class="col-span-1 md:col-span-3 lg:col-span-3">
+															<label for="RealizaRequisa" class="block text-sm font-medium text-gray-700 mb-2">¿Requisa realizada?</label>
+															<select name="RealizaRequisa" id="RealizaRequisa" class="block w-full px-3 py-2 text-gray-700 rounded-lg border border-gray-300 shadow-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all">
+																<option value="1">✓ Sí</option>
+																<option value="-1">✗ No</option>
 															</select>
 														</div>
-														<div class="col-span-5">
-                        			<label for="ObsRequisa">Observaciones de la requisa</label>
-															<input name="ObsRequisa" type="text" class="block w-full ps-3 pe-3 py-1 text-gray-500 rounded-lg border border-default-medium text-heading text-sm shadow-xs placeholder:text-body outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all" 
-															id="ObsRequisa" placeholder="Observaciones de la requisa">
+
+														<!-- Observaciones de requisa -->
+														<div class="col-span-1 md:col-span-3 lg:col-span-5">
+															<label for="ObsRequisa" class="block text-sm font-medium text-gray-700 mb-2">Observaciones de la requisa</label>
+															<input name="ObsRequisa" type="text" id="ObsRequisa" class="block w-full px-3 py-2 text-gray-700 rounded-lg border border-gray-300 shadow-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all" placeholder="Ingrese observaciones...">
 														</div>
-														<div class="col-span-2">
-															<label for="HoraFinalizaRecorrido">Hora Finaliza Recorrido</label>
-															<input name="HoraFinalizaRecorrido" type="text" class="block w-full max-w-96 ps-3 pe-3 py-1 text-gray-500 rounded-lg border border-default-medium text-heading text-sm shadow-xs placeholder:text-body outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all" 
-															id="HoraFinalizaRecorrido" onBlur="ValidarHora(this);" maxlength="5" autocomplete="off" placeholder="Hora Finaliza Entrega">
-														</div>
-													</div>
-													<div class="flex items-center gap-x-3 mt-6 p-3 rounded-lg border border-blue-200" id="DivAceptoTerminarMinuta">
-														<div class="flex items-center gap-3">
-															<label class="relative inline-flex items-center cursor-pointer" id="LblAceptoTerminar" for="CheckAceptoTerminar">
-																<!-- Input oculto pero funcional -->
-																<input type="checkbox" id="CheckAceptoTerminar" name="CheckAceptoTerminar" class="sr-only peer">
-																<!-- El Riel del Toggle -->
-																<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-																<!-- Texto del Label -->
-															</label>
-														</div>
-														<div>
-															<p class="font-">Aceptar Creación de minuta y apertura para rotaciones y novedades</p>
-															<p class="text-[12px] text-gray-400">Al activar esta opción, la minuta quedará lista y podrá agregarse rotaciones y novedades.</p>
+
+														<!-- Hora Finaliza Recorrido -->
+														<div class="col-span-1 md:col-span-1 lg:col-span-2">
+															<label for="HoraFinalizaRecorrido" class="block text-sm font-medium text-gray-700 mb-2">Hora de Finalización</label>
+															<input name="HoraFinalizaRecorrido" type="text" id="HoraFinalizaRecorrido" onBlur="ValidarHora(this);" maxlength="5" autocomplete="off" class="block w-full px-3 py-2 text-gray-700 rounded-lg border border-gray-300 shadow-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition-all" placeholder="HH:MM">
 														</div>
 													</div>
-												</form>
-										 </div>
+
+													<!-- Checkbox Aceptar Terminar Minuta -->
+													<div class="flex items-start gap-4 mt-6 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 border-l-4 border-l-blue-600" id="DivAceptoTerminarMinuta">
+														<label class="relative inline-flex items-center cursor-pointer" id="LblAceptoTerminar" for="CheckAceptoTerminar">
+																	<!-- Input oculto pero funcional -->
+																	<input type="checkbox" id="CheckAceptoTerminar" name="CheckAceptoTerminar" class="sr-only peer">
+																	<!-- El Riel del Toggle -->
+																	<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+																	<!-- Texto del Label -->
+																</label>
+														<div class="flex-1">
+															<p class="font-semibold text-gray-800">Aceptar Creación de Minuta</p>
+															<p class="text-sm text-gray-600 mt-1">Al activar esta opción, la minuta quedará lista para agregar rotaciones y novedades.</p>
+														</div>
+													</div>
+												</div>
+											</form>
+										</div>
+
 								</div>
 
                 <div class="flex gap-3 pt-4">

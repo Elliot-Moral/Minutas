@@ -76,6 +76,7 @@ CREATE TABLE solicitudes.vigilanciaminuta(
 	FFirmaSaliente DATETIME DEFAULT NULL,
 	ObsFirmaSaliente VARCHAR(200) NOT NULL DEFAULT '',
 	RealizaRequisa SMALLINT(1) NOT NULL DEFAULT 0,
+	ObsInfraestructura VARCHAR(250) NOT NULL DEFAULT '', //se agrego para registrar las observaciones de infraestructura al momento de realizar la minuta
 	ObsRequisa VARCHAR(250) NOT NULL DEFAULT '',
 	HoraFinalizaRecorrido VARCHAR(5) NOT NULL DEFAULT '',
 	ObsMinuta VARCHAR(250) NOT NULL DEFAULT '',
@@ -443,7 +444,25 @@ Retornar Listado de empleados Vigilantes
 	echo "[";
 	$Queri = "SELECT CONCAT(E.Nom,' ',E.Apellido1,' ',E.Apellido2,'|-|',E.Nit_CCE) AS Nombre
 				FROM ".$PrefBD."recursos.emplea E
-				WHERE CONCAT(E.Nit_CCE,E.Nom,' ',E.Apellido1,' ',E.Apellido2) LIKE '%".$_GET['term']."%' AND E.Cargo LIKE '%VIGILA%'
+				WHERE CONCAT(E.Nit_CCE,E.Nom,' ',E.Apellido1,' ',E.Apellido2) LIKE '%".$_GET['term']."%' AND E.Cargo LIKE '%VIGILA%' AND E.Activo=1
+				ORDER BY Nombre";
+	$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
+	$contador = 0;
+	while($Row=$Result->fetch_assoc()){
+		if ($contador++ > 0) print ",";
+		echo '"'.$Row['Nombre'].'"';
+	}
+	echo "]";
+	mysqli_close($mysqli);
+	exit;
+/******************************************************************************************************************************************
+Retornar los datos los empleados de nomina
+*******************************************************************************************************************************************/
+}elseif($_GET['TipoModificar']==md5('Ajax2JorA7ListadoNomina'.date('d'))){
+	echo "[";
+	$Queri = "SELECT CONCAT(E.Nom,' ',E.Apellido1,' ',E.Apellido2,'|-|',E.Nit_CCE) AS Nombre
+				FROM ".$PrefBD."recursos.emplea E
+				WHERE CONCAT(E.Nit_CCE,E.Nom,' ',E.Apellido1,' ',E.Apellido2) LIKE '%".$_GET['term']."%' AND E.Activo=1
 				ORDER BY Nombre";
 	$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
 	$contador = 0;
@@ -457,6 +476,7 @@ Retornar Listado de empleados Vigilantes
 /******************************************************************************************************************************************
 Retornar los datos de elementos asignados a un Puesto de una Sucursal elementopuestosucursal para Crear o Editar Minuta
 *******************************************************************************************************************************************/
+
 }elseif($_GET['TipoModificar']==md5('Ajax2JorA6ElementosEditarMinuta'.date('d')) and $_GET['Sucursal'] and $_GET['IDPuestoSucursal']){
 	/*
 	ESTA CONSULTA ES PARA TRAER SOLO LOS ELEMENTOS ASIGNADOS AL PUESTO
@@ -670,6 +690,7 @@ Retornar Los datos de una Minuta
 }elseif($_POST['TipoGrabar']==md5('JorA6Tipo2'.date('d')) and $_POST['TipoModificar']==md5('Tipo2JorA6'.date('d'))){
 	$Queri = "UPDATE ".$PrefBD."solicitudes.vigilanciaminuta
 				SET RealizaRequisa=".intval($_POST['RealizaRequisa']).",
+					ObsInfraestructura='".OptimizarTexto($_POST['ObsInfraestructura'])."',
 					ObsRequisa='".OptimizarTexto($_POST['ObsRequisa'])."',
 					HoraFinalizaRecorrido='".$_POST['HoraFinalizaRecorrido']."'
 				WHERE IDMinuta=".intval($_POST['IDMinuta'])."
@@ -696,7 +717,7 @@ Retornar los Recesos en la Minuta
 
     // 2. Definición global de estados
     $finalizado = ($RowMinuta['FinalizaRegistro'] > 0);
-    $estaFirmado = (!empty($RowMinuta['FFirmaEntrante']) || !empty($RowMinuta['FFirmaSaliente']));
+    $estaFirmado = (!empty($RowMinuta['FFirmaEntrante']));
     $bloqueado = ($finalizado || $estaFirmado); // Si cualquiera es true, se bloquea
 
     // 3. Consulta de Recesos
@@ -892,7 +913,7 @@ Retornar las Novedades en la Minuta
 
     // 2. Definimos la variable de bloqueo global
     $finalizado = ($RowMinuta['FinalizaRegistro'] > 0);
-    $estaFirmado = (!empty($RowMinuta['FFirmaEntrante']) || !empty($RowMinuta['FFirmaSaliente']));
+    $estaFirmado = (!empty($RowMinuta['FFirmaEntrante']));
     $bloqueado = ($finalizado || $estaFirmado);
 
     // 3. Consulta de Novedades
@@ -911,8 +932,8 @@ Retornar las Novedades en la Minuta
                     <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest w-16">Núm</th>
                     <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">Hora</th>
                     <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Descripción Novedad</th>
-                    <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Comunicador</th>
-                    <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Cargo</th>
+                    <!-- <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Comunicador</th> -->
+                    <!-- <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Cargo</th> -->
                     <?php if (!$bloqueado): ?>
                         <th class="px-4 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-20">Acciones</th>
                     <?php endif; ?>
@@ -953,20 +974,20 @@ Retornar las Novedades en la Minuta
                             </div>
                         </td>
 
-                        <td class="px-4 py-3 whitespace-nowrap">
+                        <!-- <td class="px-4 py-3 whitespace-nowrap">
                             <div class="flex items-center gap-2">
                                 <div class="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-[10px] font-bold text-indigo-500 border border-indigo-100 uppercase">
                                     <?php echo substr($Row['ComunicadorNovedad'], 0, 1); ?>
                                 </div>
                                 <span class="text-sm text-gray-700 font-medium"><?php echo $Row['ComunicadorNovedad']; ?></span>
                             </div>
-                        </td>
+                        </td> -->
 
-                        <td class="px-4 py-3 whitespace-nowrap">
+                        <!-- <td class="px-4 py-3 whitespace-nowrap">
                             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200 uppercase tracking-tight">
                                 <?php echo $Row['CargoComunicador']; ?>
                             </span>
-                        </td>
+                        </td> -->
 
                         <?php if (!$bloqueado): ?>
                             <td class="px-4 py-3 text-center">
@@ -1136,22 +1157,37 @@ BORRAR EL REGISTRO DE UNA NOVEDAD
 Firma de la Minuta
 ****************************************************************************************************************************************/
 }elseif($_POST['TipoGrabar']==md5('JorA6Firma'.date('d')) and $_POST['TipoModificar']==md5('FirmaJorA6'.date('d'))){
-	if($_POST['TipoFirma']=='Entrante' or $_POST['TipoFirma']=='Saliente'){
+	if($_POST['TipoFirma']=='Entrante' or $_POST['TipoFirma']=='Saliente' or $_POST['TipoFirma']=='Ambos'){
+		$tipoFirma = $_POST['TipoFirma'];
+		if($_POST['TipoFirma'] =='Ambos'){
+			$tipoFirma = 'Entrante'; // Solo verificamos la firma entrante para validar el acceso, ya que ambos deben ser iguales en este caso
+		}
 		$Queri="SELECT Emplea.Nit_CCE
 				FROM ".$PrefBD."solicitudes.vigilanciaminuta Minuta
-				JOIN  ".$PrefBD."recursos.emplea Emplea ON Minuta.Vigilante".$_POST['TipoFirma']."=Emplea.Nit_CCE
+				JOIN  ".$PrefBD."recursos.emplea Emplea ON Minuta.Vigilante".$tipoFirma."=Emplea.Nit_CCE
 				WHERE Minuta.IDMinuta=".intval($_POST['IDMinuta'])." AND Emplea.Clave='".$_POST['ClaveFirma']."'
 				LIMIT 1";
 		$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
-		// if($Row=$Result->fetch_assoc()){
+		//# if($Row=$Result->fetch_assoc()){
 		$ss = true;
 		if($ss){
-			$Queri = "UPDATE ".$PrefBD."solicitudes.vigilanciaminuta
-						SET FFirma".$_POST['TipoFirma']."=SYSDATE(),
-							ObsFirma".$_POST['TipoFirma']."='".OptimizarTexto($_POST['ObsFirma'])."'
-						WHERE IDMinuta=".intval($_POST['IDMinuta'])."
-						LIMIT 1";
-			$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
+			if($_POST['TipoFirma'] !='Ambos'){
+				$Queri = "UPDATE ".$PrefBD."solicitudes.vigilanciaminuta
+							SET FFirma".$_POST['TipoFirma']."=SYSDATE(),
+								ObsFirma".$_POST['TipoFirma']."='".OptimizarTexto($_POST['ObsFirma'])."'
+							WHERE IDMinuta=".intval($_POST['IDMinuta'])."
+							LIMIT 1";
+				$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
+			}else{
+				$Queri = "UPDATE ".$PrefBD."solicitudes.vigilanciaminuta
+							SET FFirmaEntrante=SYSDATE(),
+									FFirmaSaliente=SYSDATE(),
+								ObsFirmaEntrante='".OptimizarTexto($_POST['ObsFirma'])."',
+								ObsFirmaSaliente='".OptimizarTexto($_POST['ObsFirma'])."'
+							WHERE IDMinuta=".intval($_POST['IDMinuta'])."
+							LIMIT 1";
+				$Result = $mysqli->query($Queri) or die(mysqli_error($mysqli));
+			}
 		}else{
 			echo "*Error* Clave no válida";
 		}
@@ -1160,16 +1196,18 @@ Firma de la Minuta
 	}
 
 	// verificar si ambas firmas están completas para marcar la minuta como finalizada
-	$QueriCheck = "SELECT VM.FFirmaEntrante, VM.FFirmaSaliente, PuestoSucursal.ObsPuesto AS ObsPuesto, VM.FinalizaRegistro, PuestoS.Puesto
+	$QueriCheck = "SELECT VM.FFirmaEntrante, VM.FFirmaSaliente, PuestoSucursal.ObsPuesto AS ObsPuesto, VM.FinalizaRegistro, PuestoS.Puesto, CONCAT(EVE.Nom, ' ', EVE.Apellido1, ' ', EVE.Apellido2) AS NomEVigilanteEn, CONCAT(EVS.Nom, ' ', EVS.Apellido1, ' ', EVS.Apellido2) AS NomEVigilanteSAL
 		FROM ".$PrefBD."solicitudes.vigilanciaminuta AS VM
 		JOIN ".$PrefBD."solicitudes.vigilanciapuestosucursal AS PuestoSucursal ON VM.Sucursal=PuestoSucursal.Sucursal
 		JOIN ".$PrefBD."solicitudes.vigilanciapuesto AS PuestoS ON PuestoSucursal.IDPuesto=PuestoS.IDPuesto
+		JOIN ".$PrefBD."recursos.emplea AS EVE ON VM.VigilanteEntrante=EVE.Nit_CCE
+		JOIN ".$PrefBD."recursos.emplea AS EVS ON VM.VigilanteSaliente=EVS.Nit_CCE
 		WHERE IDMinuta=".intval($_POST['IDMinuta'])."
 		LIMIT 1";
 			$ResultCheck = $mysqli->query($QueriCheck) or die(mysqli_error($mysqli));
 			if($RowCheck = $ResultCheck->fetch_assoc()){
 				if($RowCheck['FFirmaEntrante'] && $RowCheck['FFirmaSaliente']){
-        	NotificacionSolicitud($mysqli,$_POST['IDMinuta'],'Debe Autorizar', $RowCheck['ObsPuesto'], $RowCheck['Puesto']);
+        	NotificacionSolicitud($mysqli,$_POST['IDMinuta'],'Debe Autorizar', $RowCheck['ObsPuesto'], $RowCheck['Puesto'], $RowCheck['NomEVigilanteEn'], $RowCheck['NomEVigilanteSAL']);
 				}
 		}
 
@@ -1366,11 +1404,14 @@ Generar Reportes de Minutas
     exit;
 }
 
-	function NotificacionSolicitud($mysqli,$mIDSolicitud=0,$mTipo='', $sucursal, $puesto){
+	function NotificacionSolicitud($mysqli,$mIDSolicitud=0,$mTipo='', $sucursal, $puesto, $entrante = '', $saliente = ''){
+		$elementosId = "<td style=\"padding: 5px 0; color: #777; width: 40%;\"><strong>ID Solicitud:</strong></td>
+										<td style=\"padding: 5px 0; color: #104379; font-weight: bold;\">#'.$mIDSolicitud.'</td>
+										</tr>";
 
 	// mensaje para el correo con diseño personalizado
 	$destinario = "luisamp@colegiosminutodedios.edu.co";
-	$Encabezado = "Notificación de Solicitud - ".$sucursal;
+	$Encabezado = "Notificación de Minuta - ".$sucursal;
 	$Servicio = "Departamento de Seguridad";
 	$MensajeFinal = '<div style="background-color: #f4f7f9; padding: 20px; font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif;">
 				<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e1e8ed; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -1378,7 +1419,7 @@ Generar Reportes de Minutas
 						<!-- Encabezado con color corporativo -->
 						<div style="background-color: #104379; padding: 20px; text-align: center;">
 								<h2 style="color: #ffffff; margin: 0; font-size: 20px; letter-spacing: 1px;">
-										Notificación de Solicitud
+										Solicitud Por Finalizar
 								</h2>
 								<p style="color: #a5c3e4; margin: 5px 0 0 0; font-size: 14px;">Sucursal: '.$sucursal.'</p>
 						</div>
@@ -1393,20 +1434,24 @@ Generar Reportes de Minutas
 								<div style="background-color: #f9fafb; border-radius: 6px; padding: 15px; margin: 20px 0; border-left: 4px solid #15b315;">
 										<table style="width: 100%; border-collapse: collapse; font-size: 14px;">
 												<tr>
-														<td style="padding: 5px 0; color: #777; width: 40%;"><strong>ID Solicitud:</strong></td>
-														<td style="padding: 5px 0; color: #104379; font-weight: bold;">#'.$mIDSolicitud.'</td>
+														<td style="padding: 5px 0; color: #777;"><strong>Tipo de Solicitud:</strong></td>
+														<td style="padding: 5px 0; color: #333;">'.$mTipo.'</td>
 												</tr>
 												<tr>
 														<td style="padding: 5px 0; color: #777;"><strong>Puesto:</strong></td>
 														<td style="padding: 5px 0; color: #333;">'.$puesto.'</td>
 												</tr>
 												<tr>
-														<td style="padding: 5px 0; color: #777;"><strong>Tipo de Solicitud:</strong></td>
-														<td style="padding: 5px 0; color: #333;">'.$mTipo.'</td>
-												</tr>
-												<tr>
 														<td style="padding: 5px 0; color: #777;"><strong>Fecha y Hora:</strong></td>
 														<td style="padding: 5px 0; color: #333;">'.date('d/m/Y H:i:s').'</td>
+												</tr>
+												<tr>
+														<td style="padding: 5px 0; color: #777;"><strong>Vigente Entrada:</strong></td>
+														<td style="padding: 5px 0; color: #333;">'.$entrante.'</td>
+												</tr>
+												<tr>
+														<td style="padding: 5px 0; color: #777;"><strong>Vigente Salida:</strong></td>
+														<td style="padding: 5px 0; color: #333;">'.$saliente.'</td>
 												</tr>
 										</table>
 								</div>
@@ -1495,6 +1540,9 @@ $(function(){//Para Fechas
     }
 	$.datepicker.setDefaults($.datepicker.regional['es']);
     $("#FechaInicial, #FechaFinal").datepicker({ dateFormat: 'dd-mm-yy' });
+
+	document.getElementById('ui-datepicker-div').style.display = 'none';
+
 });
 
 function MostrarDatoObser(msg, mTipo=false){
@@ -1769,8 +1817,7 @@ function CerrarDivModales(nomModal) {
 														<span class="text-center hidden md:block">Reportes</span>
 													</button></li><?php
 											}?>
-											
-						</ul>
+							</ul>
 						<div>
 							<a href="../home/index.php"><span class="">
 								<button class="bg-white/5 md:bg-transparent w-full hover:bg-gray-50/10 p-1 md:px-4 md:py-3 rounded-lg text-white hover:shadow-lg active:scale-95 transition-all flex items-center gap-x-2">
@@ -2012,7 +2059,7 @@ function CerrarDivModales(nomModal) {
 				</div>
       </div>
    </div>
-
+	 
 	</main>
 </body>
 </html><?php
